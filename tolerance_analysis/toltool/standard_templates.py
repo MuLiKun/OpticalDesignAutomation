@@ -128,7 +128,7 @@ FULL_TARGET_FIELDS = (0, -0.25, 0.25, -0.5, 0.5, -0.7, 0.7, -0.9, 0.9, -1, 1)
 PRODUCT_TYPES = ("RX", "TX")
 PRODUCT_DESCRIPTIONS = {
     "RX": "RX：接收端标准模板。",
-    "TX": "TX：发射端标准模板，当前暂复用 RX，后续可单独维护。",
+    "TX": "TX：发射端标准模板，评价函数不包含 MTF 项。",
 }
 DEFAULT_PRODUCT_TYPE = "RX"
 DEFAULT_TEMPLATE_NAME = "标准分析"
@@ -182,9 +182,29 @@ _RX_TEMPLATES = {
         ),
     ),
 }
+_TX_TEMPLATES = {
+    "标准分析": TemplateSpec(
+        name="标准分析",
+        description="标准分析：使用 0、0.5、0.9、-0.9 目标视场；包含点列评价，并对 ±0.9 边缘视场增加 GENC 评价。",
+        target_fields=STANDARD_TARGET_FIELDS,
+        operands=(
+            *_spot_operands(STANDARD_TARGET_FIELDS),
+            *_genc_operands((0.9, -0.9)),
+        ),
+    ),
+    "完整视场分析": TemplateSpec(
+        name="完整视场分析",
+        description="完整视场分析：使用 0、±0.25、±0.5、±0.7、±0.9、±1 全视场序列；包含全视场 SPOT、GENC 评价。",
+        target_fields=FULL_TARGET_FIELDS,
+        operands=(
+            *_spot_operands(FULL_TARGET_FIELDS),
+            *_genc_operands(FULL_TARGET_FIELDS),
+        ),
+    ),
+}
 _PRODUCT_TEMPLATES = {
     "RX": _RX_TEMPLATES,
-    "TX": _RX_TEMPLATES,
+    "TX": _TX_TEMPLATES,
 }
 
 
@@ -334,7 +354,7 @@ def build_config(zmx_path: str, template: str = DEFAULT_TEMPLATE_NAME, level: st
             "蒙特卡洛次数": int(num_runs),
             "保存数量": int(num_to_save),
             "统计分布": "正态",
-            "补偿器模式": comp_mode,
+            "补偿器模式": "无" if product_type == "TX" else comp_mode,
             "TSC优化周期": 4,
             "中心波长号": int(center_wave),
             "后焦补偿面": "",
