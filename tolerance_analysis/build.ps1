@@ -116,9 +116,15 @@ Write-Step "校验产物"
 if (-not (Test-Path $ExePath)) {
     throw "构建结束但未找到 EXE：$ExePath"
 }
-foreach ($name in @("tol_config_模板.xlsx", "zemax_config.ini.example")) {
-    $src = Join-Path $ProjDir $name
-    $dst = Join-Path $DistDir $name
+$deliverables = @(
+    @{ Name = "tol_config_模板.xlsx"; SourceDir = $ProjDir },
+    @{ Name = "zemax_config.ini.example"; SourceDir = $ProjDir },
+    @{ Name = "公差分析程序_使用说明.md"; SourceDir = $ProjDir },
+    @{ Name = "README.md"; SourceDir = (Split-Path $ProjDir -Parent) }
+)
+foreach ($item in $deliverables) {
+    $src = Join-Path $item.SourceDir $item.Name
+    $dst = Join-Path $DistDir $item.Name
     if ((Test-Path $src) -and -not (Test-Path $dst)) {
         throw "构建结束但交付文件缺失：$dst"
     }
