@@ -97,6 +97,13 @@ function Resolve-ZosDir {
 
 解析成功一次后，持久化该值以便复用：写入当前会话的 `$env:ZOS_DIR`，或作为缓存路径记住，供后续调用使用。
 
+### 本项目已封装的 Python(pythonnet) 连接（本工作区优先）
+
+本工作区**已确认装有 pythonnet**，公差分析项目 `tolerance_analysis/toltool/zos_connect.py` 提供了成熟的 Python 连接实现，改本机连接逻辑时优先复用而非重写：
+- DLL 目录发现顺序：`zemax_config.ini` 缓存 → 环境变量 `ZEMAX_ZOS_DIR` → 注册表（`HKCU/HKLM` 下 `Software\Zemax`、`Software\Ansys\Zemax OpticStudio` 的 `ZemaxRoot/InstallDir/InstallPath`，注意 `ZemaxRoot` 常指数据目录需回溯父级）→ 按盘符 glob 版本号。命中后写回 `zemax_config.ini` 持久化。
+- 校验目录须同时含 `ZOSAPI_NetHelper.dll` / `ZOSAPI_Interfaces.dll` / `ZOSAPI.dll` 三者。
+- 连接方式与 PowerShell 一致：GUI 用 `ConnectAsExtension`，批处理用 `CreateNewApplication`；打开 zmx 后**先 SaveAs 工作副本再操作，不改原文件**。
+
 ## 优先连接策略
 
 当用户说 Zemax 文件已打开且交互扩展已开启时，优先使用 `ConnectAsExtension($instance)`。这会直接连接当前 GUI 会话。
@@ -253,6 +260,280 @@ for($seriesNum=0; $seriesNum -lt $mtfResults.NumberOfDataSeries; $seriesNum++){
   Write-Host ('Series {0}: Tangential={1:N6}, Sagittal={2:N6}' -f $seriesNum,$tanValue,$sagValue)
 }
 ```
+
+## 非序列模式（NSC/NCE）连接与常用命令
+
+经验来源：本机官方示例与手册。
+
+- 示例代码目录：`C:\ProgramData\Zemax\ZOS-API Sample Code\`，已对照学习 Python / MATLAB / C# 三种语言版本。MATLAB 版本对 .NET 数组、`GetAllDetectorData()`、`FillValues()`、ZRD Reader 的演示更完整。
+- 用户手册：`D:\Program Files\Ansys Zemax OpticStudio 2023 R1.00\OpticStudio_UserManual_zh.pdf` 与 `D:\Program Files\Ansys Zemax OpticStudio 2023 R1.00\OpticStudio_UserManual_en.pdf`。遇到操作数编号、Detector 数据含义、ZPL `MODIFYSETTINGS` key、NSC 对象参数列含义时优先查手册/API Syntax Help。
+
+重点示例：
+
+- `*_02_NSC_ray_trace`：打开非序列样例、运行 NSC Ray Trace、读取 Detector Rectangle 像素；MATLAB 版额外演示 `GetDetectorSize()` + `GetAllDetectorData()` + .NET buffer。
+- `*_05_Read_ZRD_File`：保存 ZRD，并用 `OpenRayDatabaseReader()`、`ReadNextResult()`、`ReadNextSegmentFull()` 逐 ray/segment 读取。
+- `*_06_nsc_phase`：新建非序列系统、Source Point + Detector Rectangle、读取非相干 irradiance 与 coherent real/imag。
+- `*_08_NSCEDetectorData`：Detector Polar / Rectangle 数据、保存/加载探测器数据、`GetMatrix()` 共位姿放置、coherent 数据。
+- `*_09_NSC_CAD`：非序列 CAD/Polygon Object。
+- `*_10_NSC_ZRD_filter_string`：保存 ZRD、Detector Viewer 过滤、Path Analysis。
+- `*_17_NSC_BulkScatter`：体散射、NSC Shaded Model、Detector Viewer、CFG `ModifySettings()`。
+- `*_24_nsc_detectors`：Source/Asphere/Lens/DetectorColor/DetectorRectangle、面属性、散射、RGB `FillValues()`、FalseColor 探测器读取。
+
+### 打开或创建非序列系统
+
+已打开 GUI 文件时仍优先用 `ConnectAsExtension($instance)`，连接后检查 `$sys.Mode`。若需要新建非序列系统：
+
+```powershell
+# 独立应用中直接创建非序列系统
+$sys = $app.CreateNewSystem([ZOSAPI.SystemType]::NonSequential)
+$nce = $sys.NCE
+
+# 或从当前系统转换为非序列（会改变当前系统，谨慎使用）
+$sys.New($false)
+$sys.MakeNonSequential()
+$nce = $sys.NCE
+```
+
+打开现有非序列文件与序列相同：
+
+```powershell
+$sys.LoadFile($targetFile, $false)
+Write-Host "Mode: $($sys.Mode)"
+$nce = $sys.NCE
+```
+
+### NCE 对象访问与对象类型
+
+```powershell
+$nce = $sys.NCE
+$obj1 = $nce.GetObjectAt(1)
+$obj2 = $nce.InsertNewObjectAt(2)
+$nce.RemoveObjectAt(3)
+
+# 改对象类型
+$type = $obj1.GetObjectTypeSettings([ZOSAPI.Editors.NCE.ObjectType]::SourcePoint)
+$obj1.ChangeType($type)
+
+# 常见类型：SourcePoint、SourceEllipse、DetectorRectangle、DetectorColor、DetectorPolar、StandardLens、RectangularVolume、AsphericSurface2、CADPartSTEPIGESSAT、PolygonObject
+```
+
+### 设置对象位置、材料和参数
+
+优先使用强类型属性；没有强类型属性时通过 NCE 参数列设置。
+
+```powershell
+$obj = $nce.GetObjectAt(1)
+$obj.XPosition = 0
+$obj.YPosition = 0
+$obj.ZPosition = 10
+$obj.TiltAboutX = 0
+$obj.TiltAboutY = 0
+$obj.TiltAboutZ = 0
+$obj.Material = 'N-BK7'
+$obj.RefObject = 2
+
+# 强类型 ObjectData
+$data = $obj.ObjectData
+$data.NumberOfLayoutRays = 10
+$data.NumberOfAnalysisRays = 1000000
+
+# 按 NCE 参数列写入，例如 Par1/Par2/Par3/Par4
+$obj.GetObjectCell([ZOSAPI.Editors.NCE.ObjectColumn]::Par1).DoubleValue = 10
+$obj.GetObjectCell([ZOSAPI.Editors.NCE.ObjectColumn]::Par2).DoubleValue = 10
+$obj.GetObjectCell([ZOSAPI.Editors.NCE.ObjectColumn]::Par3).IntegerValue = 100
+$obj.GetObjectCell([ZOSAPI.Editors.NCE.ObjectColumn]::Par4).IntegerValue = 100
+```
+
+### 运行非序列光线追迹
+
+```powershell
+$rt = $sys.Tools.OpenNSCRayTrace()
+$rt.ClearDetectors(0)       # 0 表示清空全部 detector
+$rt.SplitNSCRays = $false
+$rt.ScatterNSCRays = $true
+$rt.UsePolarization = $false
+$rt.IgnoreErrors = $true
+$rt.SaveRays = $false
+$rt.RunAndWaitForCompletion()
+$rt.Close()
+```
+
+保存 ZRD：
+
+```powershell
+$rt = $sys.Tools.OpenNSCRayTrace()
+$rt.ClearDetectors(0)
+$rt.IgnoreErrors = $true
+$rt.SaveRays = $true
+$rt.SaveRaysFile = 'api_trace.ZRD'  # 通常保存到镜头文件同目录
+$rt.RunAndWaitForCompletion()
+$rt.Close()
+```
+
+### 读取 Detector Rectangle 数据
+
+```powershell
+$detObj = 4
+
+# 单值读取：pix=0 常用于总通量；pix=-3/-4 等特殊值对应总 hits/统计量，具体含义看 API/NSDD 说明
+$ok, $totalFlux = $nce.GetDetectorData($detObj, 0, 0, 0)
+$ok, $stdDev = $nce.GetDetectorData($detObj, -4, 0, 0)
+
+# 尺寸
+$ok, $nx, $ny = $nce.GetDetectorDimensions($detObj, 0, 0)
+
+# 全像素数组：data=0 总通量，data=1 flux/area，data=2 flux/solid angle pixel
+$flux = $nce.GetAllDetectorDataSafe($detObj, 0)
+$irradiance = $nce.GetAllDetectorDataSafe($detObj, 1)
+```
+
+注意：`GetAllDetectorDataSafe()` 返回 .NET 二维数组，PowerShell 中可用 `GetLength(0/1)` 与 `GetValue(x,y)` 逐点读取。
+
+MATLAB 版本还演示了更底层的 buffer 形式，适合迁移到 .NET/PowerShell 思路：
+
+```text
+size = NCE.GetDetectorSize(detObj)
+GetAllDetectorData(detObj, dataType, size, System.Double[] buffer)
+GetDetectorDimensions(detObj) -> rows/cols
+```
+
+在 PowerShell 中如果 `GetAllDetectorDataSafe()` 不满足需求，可优先试 Safe 版本；只有需要完全复刻 MATLAB/C# 示例或处理特殊 COM/.NET 数组时，再使用 `GetAllDetectorData()` + 预分配 `System.Double[]`。
+
+### 读取相干 Detector 数据
+
+```powershell
+$detObj = 2
+$real = $nce.GetAllCoherentDataSafe($detObj, [ZOSAPI.Editors.NCE.DetectorDataType]::Real)
+$imag = $nce.GetAllCoherentDataSafe($detObj, [ZOSAPI.Editors.NCE.DetectorDataType]::Imaginary)
+$ampOk, $amp = $nce.GetCoherentData($detObj, 0, [ZOSAPI.Editors.NCE.DetectorDataType]::Amplitude, 0)
+$powOk, $pow = $nce.GetCoherentData($detObj, 0, [ZOSAPI.Editors.NCE.DetectorDataType]::Power, 0)
+```
+
+### Detector Polar 数据
+
+```powershell
+$detObj = 3
+$powerFlag = [ZOSAPI.Editors.NCE.PolarDetectorDataType]::Power
+$cxFlag = [ZOSAPI.Editors.NCE.PolarDetectorDataType]::Cx
+$cyFlag = [ZOSAPI.Editors.NCE.PolarDetectorDataType]::Cy
+
+$ok, $power = $nce.GetPolarDetectorData($detObj, -4, $powerFlag, 0)
+$ok, $cx = $nce.GetPolarDetectorData($detObj, 0, $cxFlag, 0)
+$ok, $cy = $nce.GetPolarDetectorData($detObj, 0, $cyFlag, 0)
+
+$triX = $nce.GetAllPolarDetectorDataSafe($detObj, [ZOSAPI.Editors.NCE.PolarDetectorDataType]::TriX)
+```
+
+保存/加载 detector 数据：
+
+```powershell
+$nce.SaveDetector(3, 'C:\path\detector3.DDP')  # Detector Polar
+$nce.SaveDetector(4, 'C:\path\detector4.DDR')  # Detector Rectangle
+$nce.LoadDetector(3, 'C:\path\detector3.DDP', $false)
+$nce.LoadDetector(4, 'C:\path\detector4.DDR', $false)
+```
+
+### Detector Viewer / NSC 布局分析
+
+```powershell
+# Detector Viewer
+$dv = $sys.Analyses.New_Analysis([ZOSAPI.Analysis.AnalysisIDM]::DetectorViewer)
+$set = $dv.GetSettings()
+$set.Detector.SetDetectorNumber(4)
+$set.ShowAs = [ZOSAPI.Analysis.DetectorViewerShowAsTypes]::FalseColor
+$dv.ApplyAndWaitForCompletion()
+$res = $dv.GetResults()
+$grid = $res.GetDataGrid(0).Values
+
+# TrueColor RGB
+$set.ShowAs = [ZOSAPI.Analysis.DetectorViewerShowAsTypes]::TrueColor
+$dv.ApplyAndWaitForCompletion()
+$rgbGrid = $dv.GetResults().GetDataGridRgb(0)
+
+# MATLAB 版对 RGB 演示更完整：DataGridsRgb.Get(0).FillValues(count, rData, gData, bData)
+# PowerShell 中通常可用 GetValue(x,y)；若性能不足，再改用 FillValues + System.Single[] buffer。
+
+# NSC Shaded Model / 3D Layout
+$shade = $sys.Analyses.New_Analysis([ZOSAPI.Analysis.AnalysisIDM]::NSCShadedModel)
+$layout = $sys.Analyses.New_Analysis([ZOSAPI.Analysis.AnalysisIDM]::NSC3DLayout)
+```
+
+ZRD 过滤显示：
+
+```powershell
+$dv = $sys.Analyses.New_DetectorViewer()
+$set = $dv.GetSettings()
+$set.RayDatabaseFilename = 'api_trace.ZRD'
+$set.ShowAs = [ZOSAPI.Analysis.DetectorViewerShowAsTypes]::FalseColor
+$set.Filter = 'X_HIT(2, 4)'
+$dv.ApplyAndWaitForCompletion()
+```
+
+直接读取 ZRD Ray Database：
+
+```powershell
+$reader = $sys.Tools.OpenRayDatabaseReader()
+$reader.ZRDFile = 'C:\path\api_trace.ZRD'
+$reader.RunAndWaitForCompletion()
+if(-not $reader.Succeeded){ throw $reader.ErrorMessage }
+$results = $reader.GetResults()
+$ok, $rayNumber, $waveIndex, $wlUM, $numSegments = $results.ReadNextResult()
+while($ok){
+  $segOk, $segmentLevel, $segmentParent, $hitObj, $hitFace, $insideOf, $status, $x, $y, $z, $l, $m, $n, $exr, $exi, $eyr, $eyi, $ezr, $ezi, $intensity, $pathLength, $xybin, $lmbin, $xNorm, $yNorm, $zNorm, $index, $startingPhase, $phaseOf, $phaseAt = $results.ReadNextSegmentFull()
+  while($segOk){
+    # 处理每个 ray segment 的位置/方向/命中对象/强度/相位等数据
+    $segOk, $segmentLevel, $segmentParent, $hitObj, $hitFace, $insideOf, $status, $x, $y, $z, $l, $m, $n, $exr, $exi, $eyr, $eyi, $ezr, $ezi, $intensity, $pathLength, $xybin, $lmbin, $xNorm, $yNorm, $zNorm, $index, $startingPhase, $phaseOf, $phaseAt = $results.ReadNextSegmentFull()
+  }
+  $ok, $rayNumber, $waveIndex, $wlUM, $numSegments = $results.ReadNextResult()
+}
+$reader.Close()
+```
+
+ZRD Reader 来自 MATLAB/C# `*_05_Read_ZRD_File` 示例；它按 ray 与 segment 迭代，适合需要命中对象、命中面、光线方向、强度、光程、相位等底层数据的场景。
+
+### 面属性、散射、体散射
+
+```powershell
+$obj = $nce.GetObjectAt(3)
+$obj.CoatScatterData.GetFaceData(0).FaceIs = [ZOSAPI.Editors.NCE.FaceIsType]::Absorbing
+$obj.CoatScatterData.GetFaceData(1).FaceIs = [ZOSAPI.Editors.NCE.FaceIsType]::ObjectDefault
+$obj.CoatScatterData.GetFaceData(1).Coating = 'I.50'
+
+$scatter = $obj.CoatScatterData.GetFaceData(2).CreateScatterModelSettings([ZOSAPI.Editors.NCE.ObjectScatteringTypes]::Lambertian)
+$scatter._S_Lambertian.ScatterFraction = 0.5
+$obj.CoatScatterData.GetFaceData(2).ChangeScatterModelSettings($scatter)
+$obj.CoatScatterData.GetFaceData(2).NumberOfRays = 2
+
+$vol = $nce.GetObjectAt(2)
+$vol.VolumePhysicsData.Model = [ZOSAPI.Editors.NCE.VolumePhysicsModelType]::AngleScattering
+$vol.VolumePhysicsData.ModelSettings._S_AngleScattering.MeanPath = 5
+$vol.VolumePhysicsData.ModelSettings._S_AngleScattering.Angle = 30
+```
+
+### 坐标矩阵与复刻对象姿态
+
+MATLAB/C# `*_08_NSCEDetectorData` 演示了用 `GetMatrix(objectNumber)` 取得对象全局旋转矩阵与原点，再把新对象共位姿放置到已有对象处。PowerShell 中按 out 参数解包：
+
+```powershell
+$ok, $R11, $R12, $R13, $R21, $R22, $R23, $R31, $R32, $R33, $Xo, $Yo, $Zo = $nce.GetMatrix(2)
+$obj3.XPosition = $Xo
+$obj3.YPosition = $Yo
+$obj3.ZPosition = $Zo
+$obj3.TiltAboutX = [Math]::Atan2(-1 * $R23, $R33) * 180 / [Math]::PI
+$obj3.TiltAboutY = [Math]::Asin($R13) * 180 / [Math]::PI
+$obj3.TiltAboutZ = [Math]::Atan2(-1 * $R12, $R11) * 180 / [Math]::PI
+```
+
+若只是希望物体跟随另一物体，优先考虑 `RefObject`；若需要绝对共位姿，使用 `GetMatrix()`。
+
+### 非序列操作注意事项
+
+- 先确认 `$sys.Mode`，非序列对象编辑器为 `$sys.NCE`，不是 `$sys.LDE`。
+- 新建非序列系统优先用 `$app.CreateNewSystem([ZOSAPI.SystemType]::NonSequential)`；转换当前文件用 `$sys.MakeNonSequential()` 前必须明确用户允许。
+- Ray Trace 前通常先 `ClearDetectors(0)`，否则会叠加旧探测器数据。
+- `SaveRaysFile` 只写文件名时通常落在镜头文件目录；后续 Detector Viewer/Path Analysis 使用同名 ZRD。
+- Detector 数据读取既可从 NCE 直接读，也可通过 Detector Viewer 分析结果读；批量数值优先用 NCE 的 `GetAll...Safe()`。
+- CAD/Polygon 类型引用的文件必须位于 Zemax 对应对象目录，或使用 OpticStudio 项目偏好中已配置的对象路径。
 
 ## 来自某次此前会话的示例验证结果
 
