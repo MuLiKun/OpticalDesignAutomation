@@ -838,9 +838,30 @@ class MainWindow(QtWidgets.QMainWindow):
         if hasattr(self, "lb_std_template"):
             self.lb_std_template.setToolTip(tip)
 
+    def _sync_comp_for_product(self) -> None:
+        if not hasattr(self, "cb_comp"):
+            return
+        is_standard = getattr(self, "cb_analysis_mode", None) is not None \
+            and self.cb_analysis_mode.currentData() == "standard"
+        is_tx = is_standard and (self.cb_product_type.currentText() or "").strip().upper() == "TX"
+        if is_tx:
+            idx = self.cb_comp.findText("无")
+            if idx >= 0:
+                self.cb_comp.setCurrentIndex(idx)
+            self.cb_comp.setEnabled(False)
+            self.cb_comp.setToolTip("TX 标准模板不做补偿，固定为无。")
+            if hasattr(self, "lb_comp"):
+                self.lb_comp.setToolTip("TX 标准模板不做补偿，固定为无。")
+        else:
+            self.cb_comp.setEnabled(True)
+            self.cb_comp.setToolTip("")
+            if hasattr(self, "lb_comp"):
+                self.lb_comp.setToolTip("")
+
     def _on_product_type_changed(self) -> None:
         self._update_product_tooltip()
         self._refresh_standard_templates(self.cb_std_template.currentText())
+        self._sync_comp_for_product()
 
     def _setting(self, key: str, default: str = "") -> str:
         return str(self._settings.value(key, default) or "")
@@ -942,6 +963,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if hasattr(self, "lb_standard_panel"):
             self.lb_standard_panel.setVisible(use_standard or use_current)
             self.lb_standard_panel.setText("标准模板：" if use_standard else "运行参数：")
+        self._sync_comp_for_product()
         self._settings.setValue("analysis_mode", mode)
 
     def _pick_zmx(self):
