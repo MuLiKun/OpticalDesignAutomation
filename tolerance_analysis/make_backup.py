@@ -19,7 +19,6 @@ DEFAULT_ITEMS = [
     "tolerance_analysis/toltool",
     "tolerance_analysis/公差分析程序_使用说明.md",
     "tolerance_analysis/公差分析程序_需求文档.md",
-    "tolerance_analysis/公差分析工具_泛化需求文档.md",
     "tolerance_analysis/公差分析工具_开发进度与测试记录.md",
 ]
 
