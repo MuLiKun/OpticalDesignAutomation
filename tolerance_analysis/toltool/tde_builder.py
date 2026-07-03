@@ -368,11 +368,12 @@ def build_and_write(zos_system, wizard_rows: list[dict],
                     test_wavelength_um: float = 0.0,
                     focus_compensation: bool = False,
                     comp_surface: int = 0,
-                    comp_min=None, comp_max=None) -> int:
+                    comp_min=None, comp_max=None,
+                    force_comp: bool = False) -> int:
     """完整流程：原生向导生成 → 明细覆盖 → COMP 补偿器 → 返回 TDE 总行数。
 
     顺序铁律：向导 → 明细 → COMP 最后追加（否则被向导清掉）。
-    comp_surface>0 才追加 COMP；留空=0=跳过（非 bug，需在 Excel 填面号）。
+    默认 comp_surface>0 才追加 COMP；force_comp=True 时允许第 0 面 COMP。
 
     center_wave 保留兼容旧签名（原生向导用 TestWavelength 设波长，
     若只给了 center_wave 而无 test_wavelength_um，则忽略 center_wave，
