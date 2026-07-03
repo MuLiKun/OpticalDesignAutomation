@@ -4,7 +4,7 @@ r"""PyInstaller 打包配置（onedir）。
 构建（在 IDE 自带终端，非 sandbox）：
     ..\.venv\Scripts\python.exe -m PyInstaller --noconfirm gui.spec
 
-产物：dist\公差分析\公差分析.exe + 同级 tol_config_模板.xlsx。
+产物：dist\公差分析\公差分析.exe + 同级 tol_config_模板.xlsx、README.md、使用说明。
 注意：目标电脑仍需安装 Zemax OpticStudio 并有可用 license；
 ZOSAPI*.dll 运行时从本机 Zemax 安装目录加载，不打进 exe。
 """
@@ -15,11 +15,17 @@ block_cipher = None
 
 _TEMPLATE = "tol_config_模板.xlsx"
 _INI_EXAMPLE = "zemax_config.ini.example"
+_README = os.path.join("..", "README.md")
+_USER_GUIDE = "公差分析程序_使用说明.md"
 datas = []
 if os.path.isfile(_TEMPLATE):
     datas.append((_TEMPLATE, "."))
 if os.path.isfile(_INI_EXAMPLE):
     datas.append((_INI_EXAMPLE, "."))
+if os.path.isfile(_README):
+    datas.append((_README, "."))
+if os.path.isfile(_USER_GUIDE):
+    datas.append((_USER_GUIDE, "."))
 
 hiddenimports = [
     "clr",
@@ -96,3 +102,15 @@ if os.path.isfile(_INI_EXAMPLE):
     _dst = os.path.join("dist", "公差分析", _INI_EXAMPLE)
     if os.path.isdir(os.path.dirname(_dst)):
         shutil.copyfile(_INI_EXAMPLE, _dst)
+
+if os.path.isfile(_README):
+    import shutil
+    _dst = os.path.join("dist", "公差分析", "README.md")
+    if os.path.isdir(os.path.dirname(_dst)):
+        shutil.copyfile(_README, _dst)
+
+if os.path.isfile(_USER_GUIDE):
+    import shutil
+    _dst = os.path.join("dist", "公差分析", _USER_GUIDE)
+    if os.path.isdir(os.path.dirname(_dst)):
+        shutil.copyfile(_USER_GUIDE, _dst)
