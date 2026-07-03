@@ -1,105 +1,166 @@
 # zemax-skills
 
-基于 Zemax OpticStudio ZOS-API 的光学自动化工作区，目前包含**公差分析自动化程序**与配套的 Trae Skills。
+基于 Zemax OpticStudio ZOS-API 的光学自动化工作区，目前主要包含**公差分析自动化程序**和配套 Trae Skills。
 
-## 仓库内容
+---
 
+## 1. 仓库结构
+
+```text
+zemax-skills-advance_TOL/
+├── tolerance_analysis/                 公差分析自动化程序
+│   ├── gui.py                          GUI 入口（推荐）
+│   ├── tol_run.py                      命令行入口
+│   ├── check_stage1.py                 基础检查脚本
+│   ├── check_field_mapping.py          视场映射检查脚本
+│   ├── make_backup.py                  本地备份脚本
+│   ├── toltool/                        核心代码包
+│   ├── tol_config_模板.xlsx            高级 Excel 配置模板
+│   ├── 公差分析程序_使用说明.md        用户手册
+│   ├── 公差分析程序_需求文档.md        功能规格与后续规划
+│   └── 公差分析工具_开发进度与测试记录.md
+├── .trae/skills/
+│   ├── zemax-zosapi-connector/         ZOS-API 连接 skill
+│   └── zemax-tolerance-analysis/       公差分析 skill
+└── README.md
 ```
-agentstudy/
-├── tolerance_analysis/        公差分析自动化程序（主项目）
-│   ├── gui.py                 图形界面入口（PySide6，暗色主题，推荐）
-│   ├── main.py / tol_run.py   命令行入口
-│   ├── check_stage1.py / check_field_mapping.py / make_backup.py  基础检查、视场映射检查与本地备份脚本
-│   ├── toltool/               核心代码包（连接/建表/视场映射/运行/读结果）
-│   ├── 方案A_全自动 / 方案B_手动观察
-│   ├── tol_config_*.xlsx      配置/模板
-│   └── 公差分析程序_使用说明.md / _需求文档.md / 开发进度与测试记录.md
-├── .trae/skills/              Trae 技能（zemax-zosapi-connector / zemax-tolerance-analysis）
-└── .gitignore
-```
 
-> `.venv/`（虚拟环境）不入库，使用者需自行创建并安装依赖。
+> `.venv/` 不入库。当前工作区约定使用 `e:\zemax-skills-advance_TOL\.venv\Scripts\python.exe`。
 
-## 公差分析程序能做什么
+---
 
-- 连接 OpticStudio（交互扩展 / 独立实例）
-- 按 Excel 配置自动写公差表（TDE）、评价函数（MFE）、生成 TSC 脚本
-- 支持运行前配置校验，不连接 Zemax 即可检查路径、Excel 与 MFE/REPORT 映射
-- 支持高级 Excel 视场映射：按目标归一化视场匹配/插入 tol 工作副本视场，自动改写 RSCE、GENC/GMTT/GMTS/GMTA 和 REPORT 标签，并输出 `field_mapping.txt` 轻量复核报告；当前视场归一化按 X/Y 主轴处理，不再支持斜向二维视场投影
-- 支持普通标准模板模式：GUI/CLI 可直接选择产品类型（RX/TX）、模板、公差等级、MC 次数、保存数量、补偿方式与是否保存 WC/BC；TX 评价函数不含 MTF，且固定不做后焦补偿 / TSC 优化（GUI 补偿器下拉在 TX 时置“无”并禁用）；默认自动使用主波长、自动识别公差结束面，并启用模板级视场映射（`标准分析` 目标 `0,0.5,0.9,-0.9`，`完整视场分析` 目标 `0,-0.25,0.25,-0.5,0.5,-0.7,0.7,-0.9,0.9,-1,1`）；运行期临时标准配置使用唯一文件名，避免覆盖用户导出的同名配置；标准模板公差向导仅保留面倾斜/元件偏心/元件倾斜（不含面偏心），并自动追加中心指向偏移（`POINTING_DY_F0_mm`/`POINTING_DX_F0_mm`）、焦距偏移百分比（`EFL_DELTA_PCT`）、视场角（`FOV_Y_deg`，RX 取物面 / TX 取像面）与多视场指向角偏差（`POINTING_ANGLE_F*_deg`，`RAID+CONS+DIFF` 正负偏差；标准分析取 `F0/F0.5/F0.9/F-0.9`，完整分析取正视场 `F0/F0.25/F0.5/F0.7/F0.9/F1`）评价项
-- 支持使用 Zemax 当前设置模式：复用 zmx 中已有 TDE/MFE，自动从当前 MFE 生成 REPORT/TSC；补偿器判断以 TDE 中的 `COMP` 操作数为准
-- 跑脚本式蒙特卡洛公差分析，在每次运行的时间戳结果目录内保存工作副本、ZTD、日志与配置快照
-- 读取 ZTD，把自定义脚本总值、REPORT 分项和 TDE 中的 `COMP` 补偿器项独立成列做统计，并导出统计 Excel；统计行含名义值（跑蒙卡前直接从评价函数读取，随 `report_meta` 落盘）与 Cpk1.33 上下限双边输出，按方向标黄用户关注侧
-- 支持独立分析已有 ZTD；REPORT 表头优先从同名 TSC 的 `REPORT "标签" 行号` 反推，COMP 列优先用同目录 `run_config.json` 中的 TDE 顺序定位
-- GUI 按分析模式自动收敛控件：高级 Excel 模式才显示 Excel 配置行与「检查配置」；提供「预览视场映射」按钮（Standalone 在临时工作副本模拟补齐缺失视场，用同一张表展示最终视场号、X/Y、归一化值与来源状态，不运行蒙卡、不改原始 zmx），以及「打开结果目录」按钮一键打开最近结果文件夹
+## 2. 公差分析程序能做什么
 
-## 快速上手
+程序可以把 Zemax 公差分析流程自动化：
 
-详见 [tolerance_analysis/公差分析程序_使用说明.md](tolerance_analysis/公差分析程序_使用说明.md)。
+1. 连接 OpticStudio（Standalone 或 Interactive Extension）；
+2. 另存工作副本，不修改原始 `zmx`；
+3. 生成或复用 TDE / MFE / TSC；
+4. 运行脚本式 Monte Carlo；
+5. 保存 ZTD、日志、配置快照、Worst/Best Case；
+6. 读取 ZTD 并导出统计 Excel。
 
-图形界面（推荐，暗色主题，实时日志 + 运行计时）：
+当前支持三种主模式：
+
+| 模式 | 说明 |
+|---|---|
+| 普通标准模板 | 不需要手写 Excel；支持 RX/TX、标准分析/完整视场分析 |
+| 使用 Zemax 当前设置 | 复用 zmx 中已有 TDE/MFE |
+| 高级 Excel | 用 Excel 完全自定义公差、评价函数、REPORT、运行参数 |
+
+其他能力：
+
+- GUI 暗色界面、实时日志、运行计时、取消、打开结果目录；
+- 视场映射，输出 `field_mapping.txt`；
+- 独立分析已有 `.ZTD`；
+- 统计 Excel 包含名义值、Cpk1.33 上下限、均值、标准差、原始 MC 样本、REPORT 分项和 COMP 项。
+
+---
+
+## 3. 快速上手
+
+### 3.1 启动 GUI（推荐）
+
+在仓库根目录运行：
 
 ```powershell
 .\.venv\Scripts\python.exe -u tolerance_analysis\gui.py
 ```
 
-命令行：
+### 3.2 命令行运行
+
+普通标准模板模式：
 
 ```powershell
-cd tolerance_analysis
-..\.venv\Scripts\python.exe -u main.py
+.\.venv\Scripts\python.exe -u tolerance_analysis\tol_run.py --standard --zmx "镜头.zmx" --outdir "输出目录" --connect standalone --product-type RX --standard-template 标准分析 --tolerance-level 标准 --num-runs 20 --num-to-save 0
 ```
 
-普通标准模板模式（不需要手写 Excel，当前为后台/CLI/GUI 最小可用版；模板内容集中在 `tolerance_analysis/toltool/standard_templates.py`，可后续替换为正式标准）。当前行为：支持 RX/TX 产品类型（TX 评价函数不含 MTF，固定不做后焦补偿 / TSC 优化），模板为 `标准分析` / `完整视场分析`；主波长自动识别、结束面自动取像面前一面、优化补偿未填后焦补偿面时自动取像面前一面、标准模板视场映射默认开启并使用模板级目标视场，运行期临时配置生成 `<镜头名>_标准模板配置_<8位uuid>.xlsx`，GUI 可勾选保存 WC/BC：
+使用 Zemax 当前设置模式：
 
 ```powershell
-.\.venv\Scripts\python.exe -u tolerance_analysis\tol_run.py --standard --zmx "镜头.zmx" --outdir "输出目录" --connect standalone --product-type RX --standard-template 标准分析 --tolerance-level 标准 --num-runs 20
+.\.venv\Scripts\python.exe -u tolerance_analysis\tol_run.py --current-settings --zmx "镜头.zmx" --outdir "输出目录" --connect standalone --num-runs 20
 ```
 
-使用 Zemax 当前设置模式（不需要 Excel 配置，保留当前 TDE/MFE；如需补偿器优化，必须由当前 TDE 中的 `COMP` 操作数触发）：
+高级 Excel 模式：
 
 ```powershell
-.\.venv\Scripts\python.exe -u tolerance_analysis\tol_run.py --current-settings --zmx "镜头.zmx" --outdir "输出目录" --connect standalone --num-runs 20 --comp-mode 全部优化DLS
+.\.venv\Scripts\python.exe -u tolerance_analysis\tol_run.py --zmx "镜头.zmx" --config "配置.xlsx" --outdir "输出目录" --connect standalone
 ```
 
-一阶段基础检查（不连接 Zemax，含典型负向配置校验）：
+生成高级 Excel 模板：
 
 ```powershell
-..\.venv\Scripts\python.exe -u tolerance_analysis\check_stage1.py --python ..\.venv\Scripts\python.exe
+.\.venv\Scripts\python.exe -u tolerance_analysis\tol_run.py --init-template --config tolerance_analysis\tol_config_模板.xlsx
 ```
 
-本地备份快照（输出到 `_backups/`，不入库）：
+---
+
+## 4. 常用维护命令
+
+基础语法检查：
 
 ```powershell
-..\.venv\Scripts\python.exe -u tolerance_analysis\make_backup.py
+.\.venv\Scripts\python.exe -m py_compile tolerance_analysis\gui.py tolerance_analysis\tol_run.py
 ```
 
-调用顺序：入口 → `pipeline`（依次 excel_io / zos_connect / tde_builder / mfe_builder / tsc_builder）→ `tol_runner` 跑蒙卡 →（tol_run.py 再调）`ztd_reader` 出统计。
+核心模块语法检查：
 
-## 环境
+```powershell
+.\.venv\Scripts\python.exe -m py_compile tolerance_analysis\toltool\pipeline.py tolerance_analysis\toltool\tde_builder.py tolerance_analysis\toltool\mfe_builder.py tolerance_analysis\toltool\tsc_builder.py tolerance_analysis\toltool\tol_runner.py tolerance_analysis\toltool\ztd_reader.py tolerance_analysis\toltool\zos_connect.py
+```
 
-- Zemax OpticStudio 2023 R1（ZOS-API / .NET）
-- Python + pythonnet、openpyxl、numpy、PySide6（GUI）
+基础检查脚本：
 
-## 变更履历
+```powershell
+.\.venv\Scripts\python.exe -u tolerance_analysis\check_stage1.py --python .\.venv\Scripts\python.exe
+```
 
-> 仅记录功能层面的主要变更，便于追溯。日期格式 YYYY-MM-DD。
+本地备份快照：
 
-- **2026-07-03** TX 差异化与 FOV/指向角评价：TX 标准模板改为独立模板（评价函数不含 MTF），并固定不做后焦补偿 / TSC 优化（`补偿器模式=无`、`后焦补偿面` 留空）；GUI 在「普通标准模板 + TX」下把补偿器下拉框置“无”并禁用；标准模板新增视场角 `FOV_Y_deg`（RX 取物面、TX 取像面，`REAC+ACOS+SUMM`）与多视场指向角偏差 `POINTING_ANGLE_F*_deg`（`RAID+CONS+DIFF` 正负偏差，标准分析取 `F0/F0.5/F0.9/F-0.9`、完整分析取正视场 `F0/F0.25/F0.5/F0.7/F0.9/F1`）评价项。
-- **2026-07-02** 标准模板评价项与 ZTD 名义值：标准模板追加中心指向偏移 `POINTING_DY_F0_mm`/`POINTING_DX_F0_mm` 与焦距偏移百分比 `EFL_DELTA_PCT`（`EFL_DELTA_PCT` 的 `PROB` 因子写入第三参数 `100`）；标准模板公差向导移除面偏心，仅保留面倾斜/元件偏心/元件倾斜；ZTD 统计 Excel 新增“名义值”行，名义值改为跑蒙卡前直接从评价函数读取并随 `report_meta` 落盘 `run_config.json`。已知问题：真实环境下名义值仍读为空，已加告警日志与编辑器 Value 列读取 + 递归自算兜底，待实测确认。
-- **2026-07-01** 标准模板体系优化：普通标准模板模式新增 RX/TX 产品类型（TX 暂复用 RX），模板收敛为 `标准分析` / `完整视场分析`，目标视场改为模板级配置；GUI 模板下拉增加鼠标悬停备注，CLI 新增 `--product-type`。
-- **2026-07-01** GUI 易用性增强与代码审查修正：GUI 按分析模式收敛控件（高级 Excel 才显示 Excel 配置行与「检查配置」，当前设置模式隐藏「预览视场映射」）；「预览视场映射」支持在 Standalone 临时工作副本模拟补齐缺失视场，用同一张表展示最终视场号、X/Y、归一化值与来源状态；新增「打开结果目录」按钮；REPORT 筛选 GUI 入口暂时下线（后端保留）；修复运行态/模式切换按钮状态一致性、输出目录兜底路径与标准模板校验口径。
-- **2026-06-29** 视场映射与标准模板临时配置修正：视场归一化改为 X/Y 主轴规则，修复纯 X 方向正负归一化不稳定问题，并移除斜向二维视场投影逻辑；普通标准模板运行期临时配置改为 UUID 唯一文件名，避免覆盖用户导出的同名标准配置。
-- **2026-06-27** 当前设置与 COMP 统计增强：新增使用 Zemax 当前 TDE/MFE 模式；补偿器判断改为扫描 TDE 中的 `COMP`；ZTD 统计纳入 COMP 补偿器项并按 TDE 顺序定位；独立分析已有 ZTD 可结合 `run_config.json` 复现 COMP 列；视场映射复核输出由 `mapped_excel.xlsx` 简化为 `field_mapping.txt`。
-- **2026-06-26** 普通标准模板模式增强：GUI 去除波长选择并默认使用 Zemax 主波长；运行期自动识别像面前一面作为公差结束面；优化补偿未填后焦补偿面时自动取像面前一面；标准模板视场映射默认开启，目标为 `0,0.5,0.9`；GUI 新增「保存 WC/BC」勾选项；`used_excel.xlsx` 记录运行期解析后的实际配置。
-- **2026-06-26** 第二阶段普通标准模板模式启动：新增后台/CLI/GUI 最小可用版，支持 `tol_run.py --standard` 或 GUI「普通标准模板」自动生成标准模板配置并复用现有 TDE/MFE/TSC/蒙卡/统计链路。
-- **2026-06-26** 高级 Excel 视场映射增强：目标归一化视场列改为可选覆盖项；空值时从 RSCE `Param4` 或 GENC/GMTT/GMTS/GMTA 原 `Param3` 自动推断；启用后输出映射复核信息，GUI/run.log 打印最终映射表和 MFE/REPORT 改写数量。
-- **2026-06-26** 第一阶段完成并冻结：完成多样本 GUI 端到端回归、工作副本隔离、运行产物追溯、ZTD 统计和 Stage 1.5 视场映射接入。
-- **2026-06-25** 运行产物隔离与追踪增强：每次运行进入时间戳结果目录，保存 `run.log`、`run_config.json`、`used_excel.xlsx`，并在日志中打印输出清单与保存策略。
-- **2026-06-23** GUI 与统计可用性增强：GUI 记住上次文件/目录/连接模式；统计 Excel 的 Cpk1.33 上下限双边输出，并按方向标黄用户关注侧。
-- **2026-06-23** 公差运行诊断增强：GUI 日志会输出 Zemax 公差工具关键设置与运行结果，失败时附带 `Succeeded`、`ErrorMessage`、`NumberToSave`、`SaveTolDataFile`、`TolDataFile` 等状态，并补充 Zemax 数据目录下 `Tolerance` 的 ZTD 查找路径。
-- **2026-06-22** ZTD 统计模块增强：GUI 支持独立分析已有 ZTD，统计 Excel 默认启用并输出到 ZTD 同目录；ZTD 表头优先从同名 TSC 反推，找不到 TSC 时保留 colN 兜底。
-- **2026-06-21** GUI 移植性增强：Zemax 安装目录改为分层智能查找（显式 → INI 配置 → 环境变量 `ZEMAX_ZOS_DIR` → 注册表+多盘 glob 搜索）；自动找不到时弹窗引导手动选目录并写入 `zemax_config.ini` 永久记住，换电脑免改代码。
-- **2026-06-21** 新增 PyInstaller 打包（`gui.spec`，onedir 无黑窗），可生成独立 `公差分析.exe`，Excel 模板与配置模板随 exe 外置。
-- **2026-06-21** 新增 PySide6 图形界面 `gui.py`（暗色主题、实时日志、运行计时、Standalone/交互扩展连接模式切换、强制停止）。
-- **初始版本** 公差分析自动化核心：ZOS-API 连接、按 Excel 重建 TDE/MFE/TSC、脚本式蒙特卡洛、ZTD 分项统计；提供命令行入口（`main.py`/`tol_run.py`）与方案 A/B。
+```powershell
+.\.venv\Scripts\python.exe -u tolerance_analysis\make_backup.py
+```
+
+---
+
+## 5. 文档分工
+
+| 文档 | 用途 |
+|---|---|
+| [公差分析程序_使用说明.md](tolerance_analysis/公差分析程序_使用说明.md) | 使用者入口：怎么运行、怎么填配置、怎么看输出 |
+| [公差分析程序_需求文档.md](tolerance_analysis/公差分析程序_需求文档.md) | 维护者入口：当前功能规格、设计边界、后续规划 |
+| [公差分析工具_开发进度与测试记录.md](tolerance_analysis/公差分析工具_开发进度与测试记录.md) | 开发记录：关键变更、已知问题、回归测试清单 |
+| [.trae/skills/zemax-tolerance-analysis/SKILL.md](.trae/skills/zemax-tolerance-analysis/SKILL.md) | AI 执行公差分析任务时必须遵守的 ZOS-API 经验 |
+| [.trae/skills/zemax-zosapi-connector/SKILL.md](.trae/skills/zemax-zosapi-connector/SKILL.md) | AI 连接本机 Zemax 时使用的约束和流程 |
+
+---
+
+## 6. 环境要求
+
+- Windows；
+- Zemax OpticStudio 2023 R1 或兼容版本；
+- Python；
+- `pythonnet`；
+- `openpyxl`；
+- `numpy`；
+- `PySide6`。
+
+Zemax 连接和 DLL 查找细节见 skill：
+
+- [.trae/skills/zemax-zosapi-connector/SKILL.md](.trae/skills/zemax-zosapi-connector/SKILL.md)
+
+---
+
+## 7. 当前状态
+
+当前版本已具备内部试用能力：
+
+- 高级 Excel 模式主链路可用；
+- 普通标准模板模式已完成 GUI / CLI 可用闭环；
+- 使用 Zemax 当前设置模式已实现；
+- ZTD 统计和独立 ZTD 分析已实现；
+- 标准模板参数仍需结合真实项目继续定稿。
+
+详细进度和待验证项见：
+
+- [公差分析工具_开发进度与测试记录.md](tolerance_analysis/公差分析工具_开发进度与测试记录.md)
