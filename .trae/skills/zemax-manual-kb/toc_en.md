@@ -1,0 +1,1942 @@
+# Zemax OpticStudio 手册目录 (en)
+
+- p.72 The File Tab
+  - p.73 Lens File Group
+    - p.74 New/Open/Save/Save As
+    - p.74 Insert Lens
+    - p.75 File Comparator
+  - p.77 Archive Group
+    - p.78 Create Archive
+    - p.80 Load Archive
+  - p.82 Export Group
+    - p.83 CAD Files
+    - p.87 Point Cloud
+    - p.88 DXF/IGES Linework
+      - p.88 Export 2D DXF
+      - p.89 Export 3D DXF
+      - p.90 Export IGES Linework
+    - p.91 Zemax Black Box
+    - p.95 Encrypted Coating
+    - p.97 Export to Speos Lens System
+    - p.100 Export to PanDao
+  - p.100 Convert Group
+    - p.101 Convert to Project Directory
+    - p.102 Convert to NSC Group
+      - p.104 Converting sequential surfaces to non-sequential objects
+      - p.107 Exceptions and Restrictions
+    - p.114 Prepare For OpticsBuilder
+      - p.116 Steps for conversion from Sequential Mode
+      - p.117 Steps for conversion from Non-Sequential Mode
+      - p.118 User Inputs
+      - p.119 Drawing Inputs
+      - p.119 Save .ZBD File
+      - p.120 Conversion errors
+    - p.122 Convert File Formats
+      - p.123 INT Zernike to OpticStudio DAT
+      - p.125 INT Grid to OpticStudio DAT
+      - p.127 INT Grid to OpticStudio GRD
+      - p.128 Bitmap Image to OpticStudio DAT
+      - p.130 OptiWave® F3d Beam File to OpticStudio ZBF
+      - p.131 Convert ZRD or ZBF to TSV
+      - p.132 Convert CODE V to OpticStudio
+  - p.137 Explode Group
+    - p.137 Explode Autodesk Inventor Assembly
+    - p.138 Explode Creo Parametric Assembly
+    - p.139 Explode CAD Assembly
+  - p.139 Exit Button
+- p.141 The Setup Tab
+  - p.141 System Group (the Setup Tab)
+    - p.142 System Explorer
+      - p.143 Aperture (System Explorer)
+        - p.144 Aperture Type
+        - p.145 Aperture Value
+        - p.146 Apodization Type
+        - p.147 Apodization Factor
+        - p.148 Semi Diameter Margin
+        - p.149 Global Coordinate Reference Surface
+        - p.149 Telecentric Object Space
+        - p.149 Afocal Image Space
+        - p.151 Iterate Solves When Updating
+        - p.151 Fast Semi-Diameters
+        - p.152 Check GRIN Apertures
+      - p.153 Fields
+        - p.155 Field Data Editor
+      - p.170 Wavelengths
+        - p.171 Wavelength Data Editor
+      - p.172 Environment
+        - p.173 Thermal Analysis of Optical Systems
+        - p.174 Index of Refraction Computation
+        - p.176 Defining Multiple Temperature and Pressure Values
+        - p.177 Defining Which Parameters Consider Thermal Effects
+        - p.180 Defining Multiple Environments within a Single Configuration
+        - p.181 Automatic Thermal Setup
+        - p.181 Adding TCE data
+        - p.181 Modeling Gases and Liquids (environment)
+        - p.182 Adding Thermal Index Variation Data
+        - p.183 Optimizing Athermal Lenses
+        - p.183 Limitations of Thermal Analysis
+      - p.183 Polarization (System Explorer)
+        - p.185 Convert Thin Film Phase to Ray Equivalent:
+        - p.186 Unpolarized:
+        - p.186 Jx, Jy, X-Phase, Y-Phase:
+        - p.186 Method (polarization):
+        - p.187 Polarization Analysis
+        - p.188 Review of Polarization Concepts
+        - p.198 Defining the Initial Polarization
+        - p.199 Defining Polarizing Components
+        - p.201 What OpticStudio Can Compute Using Polarization Analysis
+      - p.206 Advanced Options (System Explorer)
+        - p.207 Reference OPD
+        - p.211 Paraxial Rays
+        - p.212 Method to Compute F/#
+        - p.213 Method to Compute Huygens Integral:
+        - p.214 Other Settings:
+      - p.215 Ray Aiming
+        - p.221 Ray Aiming Wizard
+      - p.223 Material Catalogs
+      - p.224 Non-sequential (system explorer)
+        - p.225 Maximum Intersections Per Ray:
+        - p.226 Maximum Segments Per Ray:
+        - p.226 Maximum Nested/Touching Objects:
+        - p.227 Maximum Source File Rays In Memory:
+        - p.227 Minimum Relative Ray Intensity:
+        - p.227 Minimum Absolute Ray Intensity:
+        - p.227 Glue Distance In Lens Units:
+        - p.228 Missed Ray Draw Distance In Lens Unit:
+        - p.228 Simple Ray Splitting:
+        - p.230 Retrace Source Rays Upon File Open:
+      - p.230 Named Filters
+      - p.232 Title/Notes
+      - p.232 Files
+      - p.234 Units
+      - p.236 Cost Estimator (system explorer)
+    - p.238 Project Preferences (system group)
+      - p.239 Address (project preferences)
+      - p.240 Colors
+      - p.242 Editors
+      - p.244 Folders
+        - p.248 OpticStudio File Types by Extension
+      - p.249 General
+      - p.253 Graphics (project preferences)
+      - p.257 Toolbar
+      - p.259 Shortcut Keys
+        - p.261 Summary of Default Shortcut Keys
+      - p.264 Message Boxes
+      - p.266 Privacy
+    - p.267 Scale Lens
+    - p.269 Autosave
+  - p.270 Program Mode Group
+    - p.271 Sequential UI Mode
+    - p.272 Non-sequential UI Mode
+    - p.274 Switching UI Modes
+  - p.278 Editors Group (Setup Tab)
+    - p.278 Lens Data Editor
+      - p.282 Data Columns
+        - p.282 Surface Number & Type
+        - p.283 Comment (data columns)
+        - p.283 Radius
+        - p.283 Thickness
+        - p.284 Material
+        - p.284 Clear Semi-Diameter or Semi-Diameter
+        - p.285 Chip Zone
+        - p.285 Mechanical Semi Diameter
+        - p.286 Conic
+        - p.286 TCE
+        - p.286 Other Parameters
+      - p.286 Sequential Surfaces (lens data editor)
+        - p.287 Summary Table of Sequential Surface Types
+        - p.291 Sequential Surface Types by Category
+        - p.295 ABCD
+        - p.296 Alternate Even
+        - p.296 Alternate Odd
+        - p.297 Atmospheric
+        - p.298 Biconic
+        - p.299 Biconic Zernike
+        - p.300 Binary 1 (sequential surfaces, lens data editor)
+        - p.303 Binary 2 (sequential surfaces, lens data editor)
+        - p.304 Binary 3
+        - p.307 Binary 4
+        - p.309 Birefringent In and Birefringent Out
+        - p.318 Black Box Lens
+        - p.319 Chebyshev Polynomial
+        - p.321 Conjugate
+        - p.323 Coordinate Break
+        - p.324 Cubic Spline
+        - p.325 Cylinder Fresnel
+        - p.326 Data (sequential surfaces, lens data editor)
+        - p.327 Diffraction Grating (sequential surfaces, lens data editor)
+        - p.328 Elliptical Grating 1
+        - p.330 Elliptical Grating 2
+        - p.331 Even Asphere
+        - p.331 Extended Asphere
+        - p.332 Extended Cubic Spline
+        - p.333 Extended Fresnel
+        - p.335 Extended Odd Asphere
+        - p.336 Extended Polynomial
+        - p.337 Extended Toroidal Grating
+        - p.338 Filter
+        - p.338 Fresnel
+        - p.339 Generalized Fresnel
+        - p.340 Gradient 1
+        - p.341 Gradient 2
+        - p.342 Gradient 3
+        - p.343 Gradient 4
+        - p.344 Gradient 5
+        - p.346 Gradient 6
+        - p.347 Gradient 7
+        - p.348 GRADIUM™
+        - p.351 Gradient 9
+        - p.353 Gradient 10
+        - p.353 Gradient 12
+        - p.355 Grid Gradient
+        - p.357 Grid Phase
+        - p.358 Grid Sag
+        - p.361 Hologram 1
+        - p.364 Hologram 2
+        - p.366 Irregular
+        - p.367 Jones Matrix (sequential surfaces, lens data editor)
+        - p.368 Lenslet Array
+        - p.368 Non-sequential Component
+        - p.368 Odd Asphere
+        - p.369 Odd Cosine
+        - p.370 Off-Axis Conic Freeform
+        - p.372 Optically Fabricated Hologram
+        - p.375 Paraxial (sequential surfaces, lens data editor)
+        - p.377 Paraxial XY
+        - p.378 Periodic
+        - p.378 Polynomial
+        - p.379 Q-Type Asphere (sequential surfaces, lens data editor)
+        - p.380 Q-Type Freeform
+        - p.382 Radial Grating
+        - p.383 Radial NURBS
+        - p.385 Retro Reflect
+        - p.385 Slide (sequential surfaces, lens data editor)
+        - p.386 Standard
+        - p.388 Superconic
+        - p.389 Tilted
+        - p.390 Toroidal
+        - p.393 Toroidal Grating
+        - p.394 Toroidal Hologram (sequential surfaces, lens data editor)
+        - p.396 Toroidal NURBS
+        - p.400 TrueFreeForm™
+        - p.400 User Defined
+        - p.412 Variable Line Space Grating
+        - p.413 Zernike Fringe Phase
+        - p.415 Zernike Fringe Sag
+        - p.416 Zernike Standard Phase
+        - p.418 Zernike Standard Sag
+        - p.419 Zernike Annular Phase
+        - p.421 Zernike Annular Standard Sag
+        - p.422 Zone Plate
+      - p.424 Surface Properties
+        - p.424 Type (surface properties)
+        - p.427 Draw (surface properties)
+        - p.431 Aperture (surface properties)
+        - p.441 Scattering (surface properties)
+        - p.445 Tilt/Decenter
+        - p.448 Physical Optics
+        - p.450 Coating
+        - p.452 Import
+        - p.452 Composite Surface
+      - p.457 Solve Types (lens data editor)
+        - p.458 Summary of Solves
+        - p.461 Curvature Solves
+        - p.463 Thickness Solves
+        - p.466 Material Solves
+        - p.469 Clear Semi-Diameter or Semi-Diameter Solves
+        - p.470 Conic Solves
+        - p.470 TCE Solve
+        - p.471 Parameter Solves
+        - p.472 Restrictions
+      - p.472 Lens Data Editor Toolbar
+        - p.472 Auto Update Mode
+        - p.473 Reload Surface
+        - p.473 Reload All Surfaces
+        - p.474 Tilt/Decenter Elements
+        - p.475 Local To Global
+        - p.477 Global To Local
+        - p.478 Add Fold Mirror
+        - p.479 Delete Fold Mirror
+        - p.480 Activate Composite Add-ons
+        - p.480 Ignore Composite Add-ons
+        - p.481 Reverse Elements
+        - p.481 Make Focal
+        - p.482 Make Double Pass
+        - p.483 Make TrueFreeForm™
+        - p.485 Grid Point Selector
+        - p.488 Apertures
+        - p.490 Add Coatings To All Surfaces
+        - p.491 Go to Surface
+        - p.494 Toggle Express View (LDE toolbar)
+        - p.495 Reset Column Order (lens data editor toolbar)
+        - p.495 Reset Column Widths (lens data editor toolbar)
+        - p.495 Automatic Width
+        - p.495 Help (lens data editor toolbar)
+    - p.496 Non-sequential Component Editor
+      - p.497 Non-sequential Overview
+        - p.498 Methods of Using NSC Ray Tracing
+        - p.501 NSC ray tracing in mixed mode (with entry and exit ports)
+        - p.504 NSC ray tracing in non-sequential mode (without ports)
+        - p.505 Object Placement
+        - p.510 Refraction and Reflection From NSC Objects
+        - p.512 Polarization and Thin Film Coatings
+        - p.512 Scattering (non-sequential overview)
+        - p.529 Diffraction from NSC Objects
+        - p.530 Coherence Length Modeling
+        - p.531 Defining GRIN Media for Non-sequential Ray Tracing
+        - p.536 Defining DLLs for Ray Splitting at Diffractive Surfaces
+        - p.538 Ray Splitting
+        - p.540 Putting It All Together
+        - p.540 The Ray Trace Control
+        - p.541 Ray Database (ZRD) Files
+        - p.545 The LightningTrace Control
+        - p.545 The Ray Database Viewer
+        - p.545 The Detector Viewer
+        - p.546 The Filter String
+        - p.553 Saving and Loading Detector Data
+        - p.556 Special Considerations for Faceted Objects
+        - p.557 DLLs in Non-Sequential Mode
+      - p.558 Data[] values for Bulk Scatter, Diffraction, Surface Scatter DLLs
+    - p.564 Data[] values for Gradient Index DLLs
+    - p.564 Data[] values for Source DLLs
+      - p.566 Non-sequential Geometry Objects
+        - p.567 Summary of NSC Objects
+        - p.571 Annular Aspheric Lens
+        - p.573 Annular Axial Lens
+        - p.575 Annular Volume
+        - p.577 Annulus
+        - p.578 Array (non-sequential geometry objects)
+        - p.582 Array Ring
+        - p.591 Aspheric Surface
+        - p.593 Aspheric Surface 2
+        - p.594 Axicon Surface
+        - p.596 Biconic Lens
+        - p.597 Biconic Zernike Lens
+        - p.600 Biconic Surface
+        - p.602 Making a Hyperhemispheric Surface
+        - p.603 Biconic Zernike Surface
+        - p.605 Binary 1 (non-sequential geometry objects)
+        - p.607 Binary 2 (non-sequential geometry objects)
+        - p.609 Binary 2A
+        - p.610 Boolean CAD
+        - p.615 Boolean Native
+        - p.619 CAD Assembly: Autodesk Inventor, Creo Parametric
+        - p.622 CAD Part: AutoDesk Inventor, Creo Parametric
+        - p.624 CAD Part: STEP/IGES/SAT
+        - p.628 CAD Part: STL
+        - p.631 CAD Part: OpticStudio Part Designer
+        - p.632 Compound Lens
+        - p.637 Compound Parabolic Concentrator (CPC)
+        - p.640 CPC Rectangular
+        - p.641 Cone
+        - p.643 Cylinder Pipe
+        - p.644 Cylinder Volume
+        - p.645 Cylinder 2 Pipe
+        - p.646 Cylinder 2 Volume
+        - p.648 Diffraction Grating (non-sequential geometry objects)
+        - p.650 Dual BEF Surface
+        - p.651 Ellipse
+        - p.652 Elliptical Volume
+        - p.653 Even Asphere Lens
+        - p.655 Extended Odd Asphere Lens
+        - p.656 Extended Polynomial Lens
+        - p.658 Extended Polynomial Surface
+        - p.660 Extruded
+        - p.661 Faceted Surface
+        - p.663 Freeform Z
+        - p.664 Fresnel 1
+        - p.667 Fresnel 2
+        - p.669 Grid Sag Lens
+        - p.671 Grid Sag Lens 2
+        - p.674 Grid Sag Surface
+        - p.676 Hexagonal Lenslet Array
+        - p.677 Hologram Lens
+        - p.680 Hologram Surface
+        - p.683 Jones Matrix (non-sequential geometry objects)
+        - p.684 Lenslet Array 1
+        - p.686 Lenslet Array 2
+        - p.688 Micro Electro Mechanical System (MEMS)
+        - p.691 Null Object
+        - p.691 Odd Asphere Lens
+        - p.692 Off-axis Mirror
+        - p.694 Paraxial Lens
+        - p.694 Polygon Object
+        - p.700 Q-Type Asphere Surface (non-sequential objects)
+        - p.701 Ray Rotator
+        - p.702 Rectangular Corner
+        - p.703 Rectangle
+        - p.704 Rectangular Pipe
+        - p.705 Rectangular Pipe Grating
+        - p.706 Rectangular Roof
+        - p.707 Rectangular Torus Surface
+        - p.709 Rectangular Torus Volume
+        - p.709 Rectangular Volume
+        - p.712 Rectangular Volume Grating
+        - p.713 ReverseRadiance Detector
+        - p.715 ReverseRadiance Target
+        - p.716 Slide (non-sequential geometry objects)
+        - p.716 Sphere (non-sequential geometry objects)
+        - p.718 Standard Lens
+        - p.719 Standard Surface
+        - p.721 Swept Object
+        - p.723 Tabulated Faceted Radial
+        - p.726 Tabulated Faceted Toroid
+        - p.728 Tabulated Fresnel Radial
+        - p.728 Toroidal Hologram (non-sequential geometry objects)
+        - p.731 Toroidal Lens
+        - p.733 Toroidal Surface
+        - p.734 Toroidal Surface Odd Asphere
+        - p.736 Torus Surface
+        - p.737 Torus Volume
+        - p.737 Triangular Corner
+        - p.738 Triangle
+        - p.739 User Defined Object
+        - p.742 Wolter Surface
+        - p.743 Zernike Surface
+      - p.745 Non-sequential Sources
+        - p.746 Summary of NSC Sources
+        - p.746 Parameters Common to All Source Objects
+        - p.747 Placing Sources Inside Objects
+        - p.748 Adding New Source Types
+        - p.748 Source Diffractive
+        - p.749 Source Diode
+        - p.753 Source DLL
+        - p.759 Source Ellipse
+        - p.761 Source EULUMDAT File
+        - p.762 Source Filament
+        - p.763 Source File
+        - p.767 Source Gaussian
+        - p.768 Source IESNA File
+        - p.769 Source Imported
+        - p.769 Source Object
+        - p.771 Source Point
+        - p.771 Source Radial
+        - p.773 Source Ray
+        - p.773 Source Rectangle
+        - p.773 Source Tube
+        - p.774 Source Two Angle
+        - p.775 Source Volume Cylinder
+        - p.776 Source Volume Ellipse
+        - p.777 Source Volume Rectangle
+      - p.777 Non-sequential Detectors
+        - p.777 Summary of NSC Detectors
+        - p.778 Detector Color Object
+        - p.782 Detector Polar Object
+        - p.785 Detector Rectangle Object
+        - p.794 Detector Surface Object
+        - p.797 Detector Volume Object
+        - p.799 Objects as Detectors
+      - p.800 Object Properties (non-sequential component editor)
+        - p.801 Type (object properties, non-sequential component editor)
+        - p.807 Draw (object properties, non-sequential component editor)
+        - p.809 Sources
+        - p.818 Coat/Scatter
+        - p.823 Scatter To
+        - p.826 Volume Physics
+        - p.837 Index
+        - p.841 Diffraction (object properties, non-sequential component editor)
+        - p.843 CAD
+      - p.850 Solve Types (non-sequential component editor)
+      - p.851 NSC Editor Toolbar
+        - p.851 Reload Object
+        - p.851 Reload All Objects
+        - p.852 Modify Reference Object
+        - p.853 Edit Object Data File
+        - p.853 View Current Object
+        - p.854 Object Editor (nsc editor toolbar)
+        - p.854 Replicate Object
+        - p.855 Combine Objects
+        - p.857 Create Polygon Object
+        - p.859 CAD Tools
+        - p.863 Freeform Z Tools
+        - p.864 Ignore Trace Errors
+        - p.865 Go to Object
+        - p.865 Toggle Express View (NSC editor toolbar)
+        - p.865 Update File Listings
+        - p.866 Reset Column Order (nsc editor toolbar)
+        - p.866 Reset Column Widths (nsc editor toolbar)
+        - p.866 Help (nsc editor toolbar)
+    - p.867 Field Data Editor (Editors Group)
+      - p.867 Fields Wizard (from the Setup Tab)
+    - p.867 Multiple Configuration Editor
+      - p.869 Multi-Configuration Operands
+        - p.876 Comment About Operands that Define Character Strings
+      - p.876 Operand Properties (multiple configuration editor)
+      - p.877 Menu Options
+      - p.878 Solve Types (multiple configuration editor)
+      - p.880 Multi-Configuration Editor Toolbar
+        - p.880 Insert Configuration
+        - p.880 Insert Configuration with Pickups
+        - p.881 Delete Configuration
+        - p.881 Make Single Configuration
+        - p.881 Make Thermal
+        - p.883 Make Conjugate
+        - p.884 Add All Data
+        - p.885 Add Hologram Variables
+        - p.886 Go to Operand
+        - p.886 Toggle Express View (multi-configuration editor toolbar)
+        - p.886 Reset Column Order (multi-configuration editor toolbar)
+        - p.887 Reset Column Widths (multi-configuration editor toolbar)
+        - p.887 Help (multi-configuration editor toolbar)
+      - p.887 Using Multiple Configurations
+        - p.887 The First Step
+        - p.888 Defining the Number of Configurations
+        - p.888 Defining Each Configuration
+        - p.889 Ignoring Surfaces
+        - p.889 Changing Configurations
+        - p.889 Optimization with Multi-Configurations
+        - p.890 Suggestions for Organizing Multiple Configuration Merit Functions
+    - p.891 Merit Function Editor (Editors Group)
+      - p.892 Optimization Wizard (from the Setup Tab)
+      - p.893 Non-sequential Optimization Wizard (from the Setup Tab)
+      - p.893 Non-sequential Bitmap Wizard (from the Setup Tab)
+      - p.893 Non-sequential Roadway Lighting Wizard (from the Setup Tab)
+    - p.893 Tolerance Data Editor (from the Setup Tab)
+    - p.894 Object Editor (editors group)
+      - p.898 Object Editor Settings
+      - p.899 Object Properties (object editor)
+      - p.902 Object Explorer Tree
+      - p.907 Object Viewer
+      - p.909 Face Properties
+    - p.910 Using the Editors
+      - p.910 Editor Windows Operations
+      - p.912 Undo, Redo, and Recover
+      - p.913 Express View
+  - p.914 System Viewers Group (the Setup Tab)
+    - p.915 Cross-Section (Setup Tab, sequential)
+    - p.915 3D Viewer (Setup Tab, sequential)
+    - p.916 Shaded Model (Setup Tab, sequential)
+    - p.916 Zemax Element Drawing (Setup Tab, sequential)
+    - p.917 ISO Element Drawing (Setup Tab, sequential)
+    - p.917 CAD Part Viewer (Setup Tab)
+    - p.918 Object Editor (Setup Tab)
+    - p.918 NSC 3D Layout (Setup Tab non-sequential)
+    - p.919 NSC Shaded Model (Setup Tab, non-sequential)
+  - p.919 Diagnostics Group
+    - p.920 System Check
+    - p.921 Performance
+    - p.922 Create Error Ray
+    - p.923 Ignore Trace Errors
+    - p.924 OpticStudio Error Codes
+  - p.932 Window Control Group
+    - p.933 Bring to Front
+    - p.934 Window Options
+      - p.935 Dock All Windows
+      - p.935 Dock All Windows to Single Workspace
+      - p.936 Float All Windows
+      - p.936 Tile All Window
+      - p.936 Cascade All Windows
+      - p.937 Lock All Windows
+      - p.937 Unlock All Windows
+      - p.938 Close All Windows
+    - p.938 Dock New Windows
+  - p.939 Configuration Group
+    - p.939 Make Thermal (Setup Tab Sequential UI Mode)
+    - p.940 Make Conjugate (Setup Tab Sequential UI Mode)
+    - p.940 Add All Data (Setup Tab Sequential UI Mode)
+    - p.941 Multiple Configuration Editor (Setup Tab Sequential UI Mode)
+    - p.942 Multiple Configuration Editor (Setup Tab Non-sequential UI Mode)
+    - p.943 Next/Previous Configuration
+- p.944 The Analyze Tab (sequential ui mode)
+  - p.945 System Viewers Group (the analyze tab, sequential ui mode)
+    - p.945 Cross-Section
+    - p.948 3D Viewer
+    - p.953 Shaded Model
+    - p.956 Zemax Element Drawing (system viewers group)
+    - p.962 ISO Element Drawing (system viewers group)
+    - p.964 CAD Part Viewer (system viewers group, the analyze tab, sequential ui mode)
+  - p.966 Image Quality Group
+    - p.966 Rays and Spots
+      - p.967 Single Ray Trace
+      - p.970 Ray Aberration (rays and spots)
+      - p.974 Standard Spot Diagram
+      - p.978 Footprint Diagram
+      - p.981 Through Focus Spot Diagram
+      - p.983 Full Field Spot Diagram
+      - p.985 Matrix Spot Diagram
+      - p.987 Configuration Matrix Spot Diagram
+      - p.989 Cardinal Points (rays and spots)
+      - p.990 Y-Ybar Drawing
+      - p.992 Vignetting Plot
+      - p.995 Incident Angle vs. Image Height
+    - p.997 Aberrations (Image Quality Group)
+      - p.997 Ray Aberration (Aberrations)
+      - p.1002 Optical Path Difference
+      - p.1005 Pupil Aberration
+      - p.1007 Field Curvature and Distortion
+      - p.1012 Grid Distortion
+      - p.1017 Longitudinal Aberration
+      - p.1019 Lateral Color
+      - p.1020 Chromatic Focal Shift
+      - p.1023 Seidel Coefficients
+      - p.1027 Seidel Diagram
+      - p.1029 Full-Field Aberration
+    - p.1034 Wavefront
+      - p.1035 Optical Path Difference (Wavefront)
+      - p.1036 Wavefront Map
+      - p.1038 Interferogram
+      - p.1042 Foucault Analysis (Wavefront)
+      - p.1045 Contrast Loss Map
+      - p.1048 Zernike Fringe Coefficients
+      - p.1054 Zernike Standard Coefficients
+      - p.1058 Zernike Annular Coefficients
+      - p.1063 Zernike Coefficients vs. Field
+      - p.1065 Full-Field Aberration (Wavefront)
+    - p.1065 PSF
+      - p.1066 FFT PSF
+      - p.1071 FFT Cross Section
+      - p.1073 FFT Line/Edge Spread
+      - p.1075 Huygens PSF
+      - p.1080 Huygens Cross Section
+    - p.1081 MTF
+      - p.1082 Contrast Loss Map (MTF)
+      - p.1083 FFT MTF
+      - p.1086 FFT Through Focus MTF
+      - p.1088 FFT Surface MTF
+      - p.1090 FFT MTF vs. Field
+      - p.1092 FFT MTF Map
+      - p.1094 Huygens MTF
+      - p.1097 Huygens Through Focus MTF
+      - p.1099 Huygens Surface MTF
+      - p.1101 Huygens MTF vs. Field
+      - p.1104 Geometric MTF
+      - p.1106 Geometric Through Focus MTF
+      - p.1108 Geometric MTF vs. Field
+      - p.1110 Geometric MTF Map
+    - p.1112 RMS
+      - p.1113 RMS vs. Field
+      - p.1117 RMS vs. Wavelength
+      - p.1119 RMS vs. Focus
+      - p.1122 RMS Field Map
+    - p.1124 Enclosed Energy
+      - p.1125 Diffraction (enclosed energy)
+      - p.1128 Geometric
+      - p.1129 Geometric Line/Edge Spread
+      - p.1131 Extended Source
+    - p.1134 Extended Scene Analysis
+      - p.1134 Image Simulation
+      - p.1142 Geometric Image Analysis
+      - p.1149 Geometric Bitmap Image Analysis
+      - p.1154 Light Source Analysis
+      - p.1157 Partially Coherent Image Analysis
+      - p.1166 Extended Diffraction Image Analysis
+      - p.1170 Relative Illumination
+      - p.1173 IMA and BIM File Viewer
+      - p.1174 Bitmap File Viewer
+  - p.1175 Laser and Fibers Group
+    - p.1177 Physical Optics Propagation
+    - p.1185 About Physical Optics Propagation
+      - p.1186 Diffraction Propagation
+        - p.1187 Representation of the Electric Field
+        - p.1187 The Fresnel Number
+        - p.1189 Angular Spectrum Propagation
+        - p.1191 Fresnel Diffraction
+        - p.1192 Selecting the Correct Propagator
+        - p.1193 Fraunhofer Diffraction
+      - p.1193 The Pilot Beam
+      - p.1196 Sign Conventions for Phase Data
+      - p.1198 Propagating In and Out of the Rayleigh Range
+      - p.1199 Separation of X and Y Propagation
+      - p.1200 Comments about Point Spacing and Sampling
+      - p.1201 Propagation Through Arbitrary Optical Surfaces
+      - p.1202 Propagating Through Non-sequential Surfaces
+      - p.1202 Accounting for Polarization
+      - p.1203 Memory Requirements
+      - p.1204 Defining the Initial Beam
+        - p.1204 Gaussian Waist
+        - p.1205 Gaussian Angle
+        - p.1206 Gaussian Size+Angle
+        - p.1206 Astigmatic Gaussian
+        - p.1207 Top Hat
+        - p.1207 File (defining the initial beam)
+        - p.1210 DLL
+        - p.1211 Multimode
+      - p.1214 Using Random Values
+      - p.1215 Using the Scale Factor
+      - p.1215 Surface Specific Settings
+      - p.1216 Considerations When Using Rays to Propagate
+      - p.1216 Computing Fiber Coupling
+        - p.1217 Where the Integral is Computed
+        - p.1217 Defining the Fiber Mode
+        - p.1218 Decenters and Tilts
+        - p.1218 Choosing the Location for the Receiving Fiber
+      - p.1218 Quantitative Beam Analysis
+        - p.1219 Beam Coordinates and Pilot Beam Properties
+        - p.1219 Peak Irradiance and Total Power
+        - p.1219 Centroid Locations
+        - p.1219 Beam Width and M-Squared
+        - p.1221 Wavefront Error and RMS Beam Deviations
+        - p.1221 Encircled Energy (quantitative beam analysis)
+        - p.1221 Second Order Moments of the Wigner Distribution
+      - p.1224 Suggestions for Use
+      - p.1226 Algorithm Assumptions
+      - p.1227 Samples
+        - p.1227 Free Space Propagation
+        - p.1228 A Pinhole Aperture
+        - p.1228 A Lens Array
+        - p.1229 Talbot Imaging
+        - p.1229 Fresnel Lens
+    - p.1229 Beam File Viewer
+    - p.1232 Gaussian Beams
+      - p.1232 Paraxial Gaussian Beam
+      - p.1239 Skew Gaussian Beam
+    - p.1241 Fiber Coupling
+      - p.1241 Single Mode Coupling
+      - p.1246 Multi-Mode Coupling
+  - p.1248 Polarization and Surface Physics Group (the analyze tab, sequential ui mode)
+    - p.1248 Polarization (polarization and surface physics group)
+      - p.1249 Polarization Ray Trace
+      - p.1250 Polarization Pupil Map
+      - p.1254 Transmission
+      - p.1257 Phase Aberration
+      - p.1258 Transmission Fan
+    - p.1260 Surface
+      - p.1260 Sag Table
+      - p.1261 Surface Sag
+      - p.1265 Surface Phase
+      - p.1267 Surface Curvature
+      - p.1270 Surface Slope
+      - p.1273 Surface Sag Cross Section
+      - p.1276 Surface Phase Cross Section
+      - p.1278 Surface Curvature Cross Section
+      - p.1281 Surface Slope Cross Section
+    - p.1284 Coatings (polarization and surface physics group, the analyze tab, sequential...
+      - p.1285 Reflection vs. Angle (coatings, polarization and surface physics group)
+      - p.1287 Transmission vs. Angle (coatings, polarization and surface physics group)
+      - p.1288 Absorption vs. Angle (coatings, polarization and surface physics group)
+      - p.1290 Diattenuation vs. Angle (coatings, polarization and surface physics group)
+      - p.1291 Phase vs. Angle (coatings, polarization and surface physics group)
+      - p.1293 Retardance vs. Angle (coatings, polarization and surface physics group)
+      - p.1295 Reflection vs. Wavelength (coatings, polarization and surface physics group)
+      - p.1297 Transmission vs. Wavelength (coatings, polarization and surface physics group)
+      - p.1298 Absorption vs. Wavelength (coatings, polarization and surface physics group)
+      - p.1300 Diattenuation vs. Wavelength (coatings, polarization and surface physics group)
+      - p.1301 Phase vs. Wavelength (coatings, polarization and surface physics group)
+      - p.1303 Retardance vs. Wavelength (coatings, polarization and surface physics group)
+    - p.1305 Diffraction Efficiency Analyses (sequential ui mode)
+      - p.1305 Diffraction Efficiency (sequential ui mode)
+      - p.1307 Efficiency vs. Angle (sequential ui mode)
+      - p.1308 Efficiency vs. Wavelength (sequential ui mode)
+      - p.1310 Calculation Assumptions and Limitations
+  - p.1311 Reports Group (the analyze tab, sequential ui mode)
+    - p.1311 Report Graphic
+    - p.1314 Surface Data
+    - p.1316 System Data
+    - p.1317 Prescription Data (reports group, the analyze tab, sequential ui mode)
+    - p.1319 System Summary Graphic
+    - p.1320 Cardinal Points (Reports group, the Analyze tab, sequential ui mode)
+  - p.1322 Universal Plot Group (the analyze tab, sequential ui mode)
+    - p.1323 Universal Plot 1-D
+    - p.1325 Universal Plot 2-D
+  - p.1329 Applications Group (the analyze tab, sequential ui mode)
+    - p.1329 Stray Light
+      - p.1330 Ghost Focus Generator
+      - p.1332 YNI Contributions
+    - p.1334 Biocular Analysis
+      - p.1334 Field of View
+      - p.1337 Dipvergence/Convergence
+    - p.1341 PAL/Freeform
+      - p.1341 Power Pupil Map
+      - p.1344 Power Field Map
+    - p.1347 NSC RayTracing
+  - p.1348 Graphics and Text Windows Operations
+    - p.1348 Toolbar Button Functions
+    - p.1355 OpticStudio’s New Graphics
+    - p.1364 Active Overlay
+      - p.1365 Unit Considerations
+      - p.1365 Toolbar Button
+      - p.1365 Overlay Series Editor
+      - p.1366 Editing Series Properties
+      - p.1367 Analyses with Multiple Subplots
+      - p.1372 Secondary Y-Axis Overlays
+      - p.1374 Additional Notes
+    - p.1374 Using the Annotation Feature
+      - p.1376 Annotating 3D Layouts
+    - p.1379 Using the Windows Clipboard
+    - p.1379 Using Pan and Zoom
+    - p.1380 Aborting Long Computations
+    - p.1380 Printing Windows
+    - p.1383 Offset of highlighted geometries in Shaded Model
+- p.1385 The Analyze Tab (non-sequential ui mode)
+  - p.1385 System Viewers Group (the analyze tab, non-sequential ui mode)
+    - p.1386 NSC 3D Layout
+    - p.1389 NSC Shaded Model
+    - p.1391 CAD Part Viewer (system viewers group, the analyze tab, non-sequential ui mode)
+    - p.1393 Object Editor (system viewers group, the analyze tab, non-sequential ui mode)
+  - p.1394 Image Quality Group (non-sequential)
+    - p.1394 NSC Geometric MTF
+  - p.1396 Trace Rays Group
+    - p.1396 Ray Trace
+    - p.1401 Lightning Trace
+    - p.1404 Critical Ray Tracer (analyze tab, non-sequential)
+    - p.1407 NSC Single Ray Trace
+  - p.1410 Detectors Group
+    - p.1411 Detector Viewer
+    - p.1416 Detector Tools
+      - p.1416 Export Polar Detector Data as IES/LDT
+      - p.1418 Save Detector Data
+      - p.1418 Load Detector Data
+      - p.1419 Playback ZRD on Detector
+  - p.1420 Raytrace Analysis Group
+    - p.1421 Ray Database Viewer
+    - p.1425 Path Analysis
+    - p.1427 Flux vs. WaveLength Analysis
+  - p.1430 Polarization Group (the analyze tab, non-sequential ui mode)
+    - p.1430 NSC Surface Sag
+    - p.1435 Coatings (polarization group, the analyze tab, non-sequential ui mode)
+      - p.1436 Reflection vs. Angle (coatings, polarization group)
+      - p.1438 Transmission vs. Angle (coatings, polarization group)
+      - p.1439 Absorption vs. Angle (coatings, polarization group)
+      - p.1441 Diattenuation vs. Angle (coatings, polarization group)
+      - p.1442 Phase vs. Angle (coatings, polarization group)
+      - p.1444 Retardance vs. Angle (coatings, polarization group)
+      - p.1445 Reflection vs. Wavelength (coatings, polarization group)
+      - p.1447 Transmission vs. Wavelength (coatings, polarization group)
+      - p.1448 Absorption vs. Wavelength (coatings, polarization group)
+      - p.1450 Diattenuation vs. Wavelength (coatings, polarization group)
+      - p.1452 Phase vs. Wavelength (coatings, polarization group)
+      - p.1453 Retardance vs. Wavelength (coatings, polarization group)
+    - p.1455 Diffraction Efficiency Analyses (non-sequential ui mode)
+      - p.1455 Diffraction Efficiency (non-sequential ui mode)
+      - p.1458 Efficiency vs. Angle (non-sequential ui mode)
+      - p.1461 Efficiency vs. Wavelength (non-sequential ui mode)
+  - p.1463 Reports Group (the analyze tab, non-sequential ui mode)
+    - p.1464 Prescription Data (reports group, the analyze tab, non-sequential ui mode)
+  - p.1467 Universal Plot Group (the analyze tab, non-sequential ui mode)
+    - p.1467 New Universal Plot 1D
+    - p.1471 New Universal Plot 2D
+  - p.1476 Applications Group (the analyze tab, non-sequential ui mode)
+    - p.1476 Roadway Lighting
+    - p.1478 Source Illumination Map
+- p.1483 The Optimize Tab (sequential ui mode)
+  - p.1483 Manual Adjustment Group
+    - p.1484 Quick Focus
+    - p.1485 Quick Adjust
+    - p.1486 Slider
+    - p.1487 Visual Optimizer
+  - p.1489 Automatic Optimization Group
+    - p.1490 Merit Function Editor (automatic optimization group)
+      - p.1491 Optimization Operands Summary
+        - p.1491 Optimization Operands Summary Table
+      - p.1493 Optimization Operands by Category
+        - p.1494 First-Order Optical Properties
+        - p.1496 Aberrations (optimization operands by category)
+        - p.1506 MTF Data
+        - p.1509 PSF/Strehl Ratio Data
+        - p.1509 Encircled Energy (optimization operands by category)
+        - p.1512 Constraints on Lens Data
+        - p.1526 Constraints on Lens Properties
+        - p.1536 Constraints on Parameter Data
+        - p.1537 Constraints on Glass Data
+        - p.1537 Constraints on Paraxial Ray Data
+        - p.1539 Constraints on Real Ray Data
+        - p.1545 Constraints on Element Positions
+        - p.1545 Constraints on TrueFreeForm™ Surface Data
+        - p.1546 Changing System Data
+        - p.1548 General Math Operands
+        - p.1549 Multi-Configuration (Zoom) Data
+        - p.1550 Gaussian Beam Data
+        - p.1551 Gradient Index Control Operands
+        - p.1552 Foucault Analysis (optimization operands by category)
+        - p.1552 Ghost Focus Control
+        - p.1554 Fiber Coupling Operands
+        - p.1556 Relative Illumination Operand
+        - p.1556 Optimization with ZPL Macros
+        - p.1556 User defined operands (optimization operands by category)
+        - p.1557 Merit Function Control Operands
+        - p.1558 Constraints on Non-sequential Object Data
+        - p.1560 Non-sequential Ray Tracing and Detector Operands
+        - p.1569 Constraints on Construction Optics for Optically Fabricated Holograms
+        - p.1569 Constraints on Optical Coatings, Polarization Ray Trace Data
+        - p.1571 Physical Optics Propagation (POP) Results
+        - p.1573 Best Fit Sphere Data
+        - p.1574 Tolerance Sensitivity Data
+        - p.1575 Thermal Coefficient of Expansion Data
+        - p.1575 Obsolete Operands
+      - p.1575 Optimization Operands (Alphabetically)
+      - p.1636 Merit Function Editor Toolbar
+    - p.1637 Optimization Wizard
+      - p.1639 Optimization Function Types
+      - p.1640 Optimization Function Criteria
+      - p.1640 Optimization Function Reference Points
+      - p.1641 Optimization Function Distortion and Color
+      - p.1641 Pupil Integration Settings
+        - p.1641 Gaussian Quadrature
+        - p.1643 Rectangular Array
+      - p.1644 Optimization Goal
+      - p.1645 Boundary Values
+      - p.1645 Other Settings
+      - p.1647 Button Functions
+    - p.1647 Optimize!
+    - p.1650 Remove All Variables
+    - p.1650 Set All Radii Variable
+    - p.1651 Set All Thickness Variable
+  - p.1652 Global Optimizers Group
+    - p.1652 Global Optimizer
+    - p.1655 Hammer Optimizer
+    - p.1657 Glass Substitution Template (global optimizers group)
+  - p.1660 Optimization Tools Group
+    - p.1660 Find Best Asphere
+    - p.1662 Convert Asphere Types
+    - p.1663 Stock Lens Matching
+    - p.1666 Test Plate Fitting
+    - p.1669 Test Plate Lists (optimization tools group)
+  - p.1671 Optimization Overview
+    - p.1672 Selecting optimization variables
+    - p.1672 Modifying the merit function
+    - p.1674 Notes on Operand Weights
+    - p.1675 Understanding Boundary Operands
+    - p.1676 Performing an optimization
+    - p.1676 Defining complex operands
+    - p.1678 Optimizing zoom and multi-configuration lenses
+    - p.1679 Optimizing Tolerance Sensitivity (optimization overview)
+    - p.1680 User Defined Operands (optimization overview)
+      - p.1681 Optimizing with ZPL Macros
+      - p.1682 Changes Made to the Lens from within the ZPLM Macro
+      - p.1683 ZPLM and the Default Merit Function
+      - p.1683 Optimizing with programs written using DDE
+      - p.1687 Optimizing with programs written using ZOS-API
+    - p.1689 Suggestions for optimizing
+    - p.1689 The Global Optimum
+    - p.1690 Sequential Optimization
+      - p.1690 Pitfalls with the Default Merit Function
+      - p.1691 Optimization with Apodized Beams
+      - p.1691 Optimizing for MTF
+      - p.1693 Optimizing Glass Selection
+      - p.1694 Optimizing Using Model Glasses
+      - p.1695 Optimizing Extra Data
+      - p.1696 Optimizing Objects in a Non-sequential Group with Sequential Rays
+      - p.1696 Optimizing with the IMAE Operand
+      - p.1697 Using Gradient Index Operands
+    - p.1698 Global Optimization
+      - p.1699 Global Optimization Capabilites of OpticStudio
+      - p.1700 The Global Optimization Algorithm
+      - p.1700 The Hammer Optimization algorithm
+      - p.1701 Global Optimization of Glass Selection
+      - p.1701 Using Glass Substitution
+      - p.1702 Restricting Selected Glasses
+      - p.1703 Suggestions for Using Global Optimizers
+- p.1705 The Optimize Tab (non-sequential ui mode)
+  - p.1705 Manual Adjustment Group (optimize tab, non-sequential)
+    - p.1705 Slider (optimize tab, non-sequential)
+    - p.1707 Visual Optimizer (optimize tab, non-sequential)
+  - p.1708 Automatic Optimization Group (optimize tab, non-sequential)
+    - p.1709 Merit Function Editor (optimize tab, non-sequential)
+      - p.1709 NSC Operands
+    - p.1714 Optimize! (optimize tab, non-sequential)
+    - p.1714 Merit Function Wizards (optimize tab, non-sequential)
+      - p.1715 Optimization Wizard (from the Setup Tab)
+      - p.1718 Bitmap Wizard (optimize tab, non-sequential)
+      - p.1720 High Resolution Images and Detectors
+      - p.1720 Roadway Lighting Wizard (optimize tab, non-sequential)
+    - p.1722 Remove All Variables (optimize tab, non-sequential)
+  - p.1723 Global Optimizers Group (optimize tab, non-sequential)
+    - p.1723 Global Optimizer (optimize tab, non-sequential)
+    - p.1724 Hammer Optimizer (optimize tab, non-sequential)
+- p.1725 The Tolerance Tab
+  - p.1726 Production Tools Group
+    - p.1726 Cost Estimator (production tools)
+      - p.1729 Optimax® Error Codes
+    - p.1732 Design Lockdown
+    - p.1735 Critical Rayset Generator
+  - p.1739 Tolerancing Group
+    - p.1739 Tolerance Data Editor
+      - p.1740 Tolerance Operands
+        - p.1742 Tolerance Operands Summary Table
+        - p.1745 TRAD: Tolerance on Radius
+        - p.1745 TCUR: Tolerance on Curvature
+        - p.1745 TFRN: Tolerance on Fringes
+        - p.1746 TTHI: Tolerance on Thickness
+        - p.1746 TCON: Tolerance on Conic
+        - p.1747 TSDI: Tolerance on Clear Semi-Diameter or Semi-Diameter
+        - p.1747 TSDX, TSDY, TSDR: Tolerance on Surface Decenters
+        - p.1747 TSTX, TSTY: Tolerance on Surface Tilts
+        - p.1748 TIRX, TIRY: Tolerance on Surface TIR
+        - p.1749 TIRR: Tolerance on Surface Irregularity
+        - p.1750 TEXI: Tolerance on Surface Irregularity Using the Fringe Zernike Model
+        - p.1752 TEZI: Tolerance on Surface Irregularity Using the Standard Zernike Model
+        - p.1753 TPAI: Tolerance on the Inverse of Parameter Data
+        - p.1753 TPAR: Tolerance on Parameter Data
+        - p.1754 TIND: Tolerance on Index
+        - p.1754 TABB: Tolerance on Abbe
+        - p.1754 TCMU: Tolerance on Coating Multiplier
+        - p.1755 TCIO: Tolerance on Coating Index Offset
+        - p.1755 TCEO: Tolerance on Coating Extinction Offset
+        - p.1755 TEDX, TEDY, TEDR: Tolerance on Element Decenters
+        - p.1756 TETX, TETY, TETZ: Tolerance on Element Tilts
+        - p.1757 TARX, TARY, TARR: Tolerance on Roll Angles
+        - p.1758 TRLX, TRLY, TRLR: Tolerance on Roll TIR
+        - p.1759 TOFF: Tolerance Off (can be used for comments)
+        - p.1759 TUDX, TUDY, TUTX, TUTY, TUTZ: Tolerance on User Defined Tilts & Decenters
+        - p.1760 TNPS, TNPA, TNMA: Tolerances on Non-sequential Data
+        - p.1760 TMCO: Tolerance on Multi-Configuration Data
+      - p.1760 Tolerance Control Operands
+        - p.1760 Tolerance Control Operands Summary Table
+        - p.1762 General Comments About Min & Max Values on Compensators
+        - p.1762 CMCO: Define Multi-Configuration Operand Compensator
+        - p.1763 CNPA: Define Non-sequential Parameter Compensator
+        - p.1763 CNPS: Define Non-sequential Position Compensator
+        - p.1763 COMP: Define Compensator
+        - p.1763 CPAR: Define Parameter Compensator
+        - p.1764 SAVE: Save Sensitivity Analysis Lenses
+        - p.1764 SEED: Seed the Random Number Generator
+        - p.1765 STAT: Define Statistics
+        - p.1765 TWAV: Test Wavelength
+      - p.1765 Operand Properties (tolerance data editor)
+      - p.1766 Tolerance Data Editor Toolbar
+    - p.1770 Tolerance Wizard
+    - p.1774 Tolerancing
+    - p.1782 Tolerance Scripts
+    - p.1783 Tolerance Summary
+  - p.1784 Quick Tolerancing Group
+    - p.1784 Quick Sensitivity
+    - p.1787 Quick Yield
+  - p.1790 Tolerance Data Visualization Group
+    - p.1790 Tolerance Data Viewer
+    - p.1792 Histogram
+    - p.1794 Yield
+  - p.1795 Manufacturing Drawings and Data Group
+    - p.1796 ISO Element Drawing (manufacturing drawings and data group)
+      - p.1803 Cost Estimator (manufacturing drawings and data group)
+        - p.1803 Cost Estimates Tab
+    - p.1805 Zemax Element Drawing (manufacturing drawings and data group)
+    - p.1811 Sag Table
+  - p.1814 Tolerancing Overview
+    - p.1816 The Basic Procedure
+    - p.1816 Tolerancing with the Irregular Surface Type
+    - p.1817 Defining Compensators
+    - p.1817 How OpticStudio Computes the Tolerance Analysis
+    - p.1818 Evaluating Compensators
+    - p.1819 Sensitivity Analysis
+    - p.1820 The RSS Estimated Change
+    - p.1821 Inverse Sensitivity Analysis
+    - p.1822 Monte Carlo Analysis
+      - p.1823 Normal Statistical Distribution
+      - p.1824 Uniform Statistical Distribution
+      - p.1825 Parabolic Statistical Distribution
+      - p.1825 User Defined Statistical Distribution
+      - p.1826 Discussion of Monte Carlo Analysis Method
+    - p.1827 Nesting Rules for Monte Carlo Analysis
+    - p.1828 Using Tolerance Scripts
+      - p.1829 The Tolerance Script Commands
+      - p.1839 Tolerance Script Example
+    - p.1841 Tolerancing Multi-Configuration (Zoom) Lenses
+    - p.1841 Tolerancing with Solves
+    - p.1841 Tolerancing irregularity with Composite Surfaces
+    - p.1842 Trouble Shooting the Tolerance Results
+    - p.1842 Optimizing for Tolerance Sensitivity (tolerancing overview)
+    - p.1843 Pitfalls When Tolerancing
+    - p.1843 Summary (tolerancing overview)
+- p.1844 The Libraries Tab
+  - p.1844 Optical Materials Group
+    - p.1845 Materials Catalog
+    - p.1846 Using Material Catalogs
+      - p.1847 Specifying Which Glass Catalogs to Use
+      - p.1848 Editing & Reviewing Glass Catalogs
+      - p.1848 Description of Catalog Data
+      - p.1851 Creating a New Catalog
+      - p.1851 Copying or Moving Glass Catalog Files
+      - p.1852 The Glass Dispersion Formulas
+        - p.1852 The Schott Formula
+        - p.1852 The Sellmeier 1 Formula
+        - p.1853 The Sellmeier 2 Formula
+        - p.1853 The Sellmeier 3 Formula
+        - p.1853 The Sellmeier 4 Formula
+        - p.1853 The Sellmeier 5 Formula
+        - p.1854 The Herzberger Formula
+        - p.1854 The Conrady Formula
+        - p.1854 The Handbook of Optics 1 Formula
+        - p.1855 The Handbook of Optics 2 Formula
+        - p.1855 The Extended Formula
+        - p.1855 The Extended 2 Formula
+        - p.1856 The Extended 3 Formula
+        - p.1856 General Comments on Using Dispersion Formulas
+      - p.1856 Fitting Index Data
+      - p.1857 Fitting Melt Data
+      - p.1860 Defining Transmission Data
+      - p.1861 Modeling Gases and Liquids (using material catalogs)
+      - p.1861 Finding a Glass Quickly
+      - p.1861 Glass Catalog Sources
+      - p.1867 Obsolete Catalog Data
+      - p.1868 The AGF & BGF File Formats
+      - p.1869 Alternate Methods of Defining Dispersion Data
+        - p.1870 Using MIL Number Glasses
+        - p.1870 Using Table Glasses
+        - p.1871 Using Model Glasses
+    - p.1872 Materials Analysis
+      - p.1873 Dispersion Diagram
+      - p.1875 Glass Map
+      - p.1877 Athermal Glass Map
+      - p.1879 Internal Transmittance vs. Wavelength
+      - p.1881 Dispersion vs. Wavelength
+      - p.1883 Grin Profile
+      - p.1885 Gradium™ Profile
+    - p.1887 Materials Tools
+      - p.1887 Glass Compare
+      - p.1889 Glass Fitting
+    - p.1892 Glass Substitution Template (materials tools)
+  - p.1894 Stock Parts Group
+    - p.1895 Lens Catalogs
+    - p.1899 Make Private Lens Catalog
+    - p.1901 Test Plate Lists (stock parts group)
+  - p.1904 Design Templates Group
+    - p.1904 Design Templates
+  - p.1905 Coatings Group
+    - p.1906 Coating Catalog
+    - p.1907 Coating Tools
+      - p.1908 Edit Coating File
+      - p.1909 Reload Coating File
+      - p.1909 Export Encrypted Coating
+    - p.1911 Defining Coatings
+      - p.1912 Editing the Coating File
+      - p.1913 Coating File Data Syntax
+      - p.1914 The MATE Data Section
+      - p.1915 The TAPR Data Section
+      - p.1918 The COAT Data Section
+      - p.1920 Defining Replicated Groups of Coating Layers
+      - p.1921 Defining Simple Ideal Coatings
+      - p.1921 The ENCRYPTED Data Section
+      - p.1922 The IDEAL Data Section
+      - p.1922 The IDEAL2 Data Section
+      - p.1923 The TABLE Data Section
+      - p.1924 Adding Comments to the Coating File
+      - p.1925 Limits on the Amount of Coating Data
+    - p.1925 About Coatings
+      - p.1925 Default Materials & Coatings Supplied with OpticStudio
+      - p.1926 Specifying Coatings on Surfaces
+      - p.1927 Coatings as Etalons
+      - p.1928 Optimizing Coatings
+      - p.1929 Properties of Uncoated Surfaces
+  - p.1931 Scattering Group
+    - p.1932 ABg Scatter Data Catalogs
+    - p.1935 Scatter Function Viewer
+    - p.1939 Scatter Polar Plot
+  - p.1944 Phosphors and Fluorescence Group
+    - p.1945 Create Spectrum File
+    - p.1946 View Spectrum File
+  - p.1948 Sources Group
+    - p.1948 IES Source Models
+      - p.1949 Download IES File
+      - p.1950 Convert Spectral Source File (SDF) to IES
+    - p.1952 Spectral Source Models
+      - p.1952 Convert to Spectral Source File
+      - p.1955 Concatenate Spectral Source Files
+  - p.1957 Source Viewers Group
+    - p.1958 Source Directivity Plot
+    - p.1960 Source Polar Plot
+    - p.1962 Source Spectrum Plot
+    - p.1964 CIE 1931 Color Chart
+    - p.1966 CIE 1976 Color Chart
+- p.1969 The Part Designer Tab
+  - p.1969 System Group (the part designer tab)
+    - p.1970 Part Designer
+    - p.1970 File (system group, the part designer tab)
+    - p.1972 Undo Redo
+    - p.1972 Load Example
+    - p.1973 Build All
+  - p.1974 Script, Sketch, and Gallery Modes, Project Preferences
+    - p.1974 Script Mode
+    - p.1975 Sketch Mode
+    - p.1976 Gallery Mode (script, sketch, and gallery modes, project preferences)
+    - p.1978 Project Preferences (script, sketch, and gallery modes, project preferences)
+  - p.1979 Insert Group (the part designer tab)
+    - p.1980 Declaration
+      - p.1980 Parameter
+      - p.1981 Constant
+    - p.1981 Objects
+      - p.1982 Cube
+      - p.1983 Cone
+      - p.1984 Cylinder
+      - p.1985 Compound Parabolic Concentrator
+      - p.1986 Rectangular Compound Parabolic Concentrator
+      - p.1987 Elliptical Volume 1
+      - p.1988 Elliptical Volume 2
+      - p.1989 Lens
+      - p.1991 Polygon
+      - p.1991 Pyramid (objects)
+      - p.1992 Slot
+      - p.1993 Sphere (objects)
+      - p.1994 Spiral
+      - p.1995 Torus
+    - p.1996 Sketch Objects
+      - p.1997 Prism/Extrusion
+      - p.1997 Pyramid (sketch objects)
+      - p.1997 Revolve
+  - p.1998 Operations Group (the part designer tab)
+    - p.1998 Shapes (operations group, the part designer tab)
+      - p.1999 Array (shapes)
+      - p.2000 Copy
+      - p.2000 Ring
+      - p.2000 Chamfer
+      - p.2000 Fillet
+      - p.2001 Free
+      - p.2001 Scale
+      - p.2001 Color (shapes)
+    - p.2001 Translate (operations group, the part designer tab)
+      - p.2002 Move
+      - p.2002 Rotate
+      - p.2003 Mirror
+      - p.2003 Reflect
+      - p.2004 Position
+    - p.2004 Boolean (operations group)
+      - p.2005 Union
+      - p.2005 Difference
+      - p.2006 Overlap
+    - p.2006 Ray (operations group, the part designer tab)
+    - p.2008 Math Syntax (operations group)
+  - p.2008 Sketch Group
+    - p.2008 Arrow Tool
+    - p.2010 Line Tool
+    - p.2010 Curve Tool
+    - p.2011 Arc Tool
+  - p.2012 Search Bar (part designer tab)
+  - p.2013 Using Part Designer
+    - p.2013 Getting Started
+    - p.2014 ZPO & ZSO
+    - p.2015 Building a Part Object
+    - p.2016 Creating a Sketch
+    - p.2017 Using a Sketch
+    - p.2018 What is a Bezier Segment?
+    - p.2020 Exposing & Parameterizing Sketches Within OpticStudio
+    - p.2021 Constraining a Curve
+    - p.2021 Naming Points & Arcs
+    - p.2022 Gallery Mode (using part designer)
+    - p.2024 Commands (using part designer)
+    - p.2024 Insert Group (using part designer)
+      - p.2024 Declaration Commands
+      - p.2025 Object Creation Commands
+      - p.2028 Sketch Object Commands
+    - p.2028 Operations Group (using part designer)
+      - p.2029 Shapes (operations group, using part designer)
+      - p.2030 Translate (operations group, using part designer)
+      - p.2031 Boolean (operations group, using parts designer)
+      - p.2031 Ray (operations group, using parts designer)
+      - p.2032 Math Syntax (operations group, using part designer)
+    - p.2032 Tutorial 1: 7-Cell Cluster Concentrator Optic (using part designer)
+    - p.2044 Tutorial 2: Building a Prism from Sketches (using part designer)
+- p.2055 The Programming Tab
+  - p.2055 ZPL Macros Group
+    - p.2056 Macro List
+    - p.2057 Edit/Run
+    - p.2060 Refresh List (zpl macros group)
+    - p.2061 New Macro
+    - p.2061 Macro Help
+  - p.2062 About the ZPL
+    - p.2063 Introduction (about the zpl)
+    - p.2063 Creating ZPL Macros
+    - p.2064 An Overview of ZPL
+      - p.2064 Assignments
+      - p.2065 Keywords (an overview of zpl)
+      - p.2065 Comments
+      - p.2066 Creating Graphics
+    - p.2066 Numeric Variables
+    - p.2067 Array Variables
+    - p.2068 Numeric Operations
+    - p.2068 Numeric Logical Operators
+    - p.2069 String Variables
+    - p.2069 String Operations
+    - p.2070 String Logical Operators
+    - p.2071 Numeric Functions
+    - p.2088 Using the FICL() Function
+    - p.2088 String Functions
+    - p.2091 KEYWORDS (about the zpl)
+      - p.2091 APMN, APMX, APTP, APXD, APYD
+      - p.2091 ATYP, AVAL
+      - p.2091 BEEP
+      - p.2091 BROWSE
+      - p.2092 CALLMACRO
+      - p.2093 CALLSETDBL
+      - p.2093 CALLSETSTR
+      - p.2093 COAT
+      - p.2094 COMPOSITEOFFAXISAPERTUREON (keywords)
+      - p.2094 COMPOSITEOFF (keywords)
+      - p.2094 COMPOSITEON (keywords)
+      - p.2094 CLOSE
+      - p.2095 CLOSEWINDOW
+      - p.2095 COLOR (keywords, about the zpl)
+      - p.2095 COMMAND
+      - p.2096 COMMENT (keywords, about the zpl)
+      - p.2096 CONI
+      - p.2096 CONVERTFILEFORMAT
+      - p.2097 CONVERTIMAGETOGRID
+      - p.2097 COPYFILE
+      - p.2098 CURV
+      - p.2098 DECLARE
+      - p.2098 DEFAULTMERIT
+      - p.2099 DELETE
+      - p.2099 DELETECONFIG (keywords)
+      - p.2100 DELETEFILE
+      - p.2100 DELETEMCO (keywords)
+      - p.2101 DELETEMFO (keywords)
+      - p.2101 DELETEOBJECT (keywords)
+      - p.2102 DELETETOL
+      - p.2102 EDVA
+      - p.2102 END
+      - p.2102 EXPORTBMP
+      - p.2103 EXPORTCAD (keywords)
+      - p.2104 EXPORTJPG
+      - p.2105 FINDFILE
+      - p.2106 FLDX, FLDY, FWGT, FVDX, FVDY, FVCX, FVCY, FVAN
+      - p.2106 FOR, NEXT
+      - p.2107 FORMAT
+      - p.2108 FTYP
+      - p.2108 GCRS
+      - p.2109 GDATE
+      - p.2109 GETDENCUSER1D
+      - p.2110 GETEXTRADATA
+      - p.2111 GETGLASSDATA
+      - p.2112 GETLSF
+      - p.2114 GETMTF
+      - p.2115 GETMTFUSER1D
+      - p.2117 GETNSCMTF
+      - p.2118 GETPSF
+      - p.2120 GETSYSTEMDATA
+      - p.2121 GETTEXTFILE (keywords)
+      - p.2123 GETVARDATA
+      - p.2124 GETZERNIKE
+      - p.2126 GLAS
+      - p.2126 GLASSTEMPLATE
+      - p.2126 GLENSNAME
+      - p.2127 GLOBALTOLOCAL (keywords)
+      - p.2127 GOSUB, SUB, RETURN, and END
+      - p.2128 GOTO
+      - p.2129 GRAPHICS (keywords)
+      - p.2130 GTEXT
+      - p.2131 GTEXTCENT
+      - p.2131 GTITLE
+      - p.2131 HAMMER (keywords)
+      - p.2132 IF-THEN-ELSE-ENDIF
+      - p.2133 IMA
+      - p.2134 IMAGECOMBINE
+      - p.2134 IMAGEEXTRACT
+      - p.2135 IMASHOW
+      - p.2136 IMASUM
+      - p.2136 IMPORTEXTRADATA (keywords)
+      - p.2137 INPUT
+      - p.2137 INSERT
+      - p.2138 INSERTCONFIG
+      - p.2138 INSERTMCO (keywords)
+      - p.2139 INSERTMFO (keywords)
+      - p.2139 INSERTOBJECT (keywords)
+      - p.2140 INSERTTOL
+      - p.2140 LABEL
+      - p.2141 LINE (keywords)
+      - p.2141 LOADARCHIVE
+      - p.2141 LOADCATALOG
+      - p.2142 LOADDETECTOR (keywords)
+      - p.2142 LOADLENS
+      - p.2143 LOADMERIT (keywords)
+      - p.2144 LOADTOLERANCE (keywords)
+      - p.2144 LOCALTOGLOBAL (keywords)
+      - p.2145 LOCKWINDOW
+      - p.2145 MAKEFACETLIST
+      - p.2146 MAKEFOLDER
+      - p.2146 MODIFYSETTINGS (keywords)
+      - p.2159 NEXT
+      - p.2159 NSLT
+      - p.2160 NSTR
+      - p.2161 NSTR2
+      - p.2162 NUMFIELD
+      - p.2162 NUMWAVE
+      - p.2162 OPEN
+      - p.2163 OPENANALYSISWINDOW
+      - p.2164 OPTIMIZE (keywords)
+      - p.2165 OPTRETURN
+      - p.2165 OUTPUT
+      - p.2166 PARM
+      - p.2166 PARAXIAL (keywords, programming tab, about the zpl)
+      - p.2167 PAUSE
+      - p.2168 PIXEL
+      - p.2168 PLOT
+      - p.2170 PLOT2D
+      - p.2172 POLDEFINE
+      - p.2173 POLTRACE
+      - p.2175 POP
+      - p.2175 PRINT
+      - p.2176 PRINTFILE
+      - p.2177 PRINTWINDOW
+      - p.2178 PWAV
+      - p.2178 QUICKFOCUS (keywords)
+      - p.2179 QUICKSENSITIVITY (keywords)
+      - p.2180 RADI
+      - p.2180 RANDOMIZE
+      - p.2181 RAYGENERATOR
+      - p.2182 RAYTRACE
+      - p.2183 RAYTRACEX
+      - p.2184 READ
+      - p.2185 READ_LOCALE
+      - p.2186 READNEXT_LOCALE
+      - p.2187 READNEXT
+      - p.2188 READSKIP
+      - p.2189 READSTRING
+      - p.2189 RELEASE
+      - p.2189 RELOADOBJECTS
+      - p.2190 REM, !, #
+      - p.2190 REMOVEVARIABLES (keywords)
+      - p.2191 RESUMEUPDATES
+      - p.2191 RENAMEFILE
+      - p.2191 RETURN
+      - p.2192 REWIND
+      - p.2192 SAVEARCHIVE
+      - p.2192 SAVEDETECTOR (keywords)
+      - p.2193 SAVELENS
+      - p.2193 SAVEMERIT (keywords)
+      - p.2194 SAVETOLERANCE (keywords)
+      - p.2194 SAVEWINDOW
+      - p.2195 SCATTER
+      - p.2195 SDIA
+      - p.2195 SETAIM
+      - p.2196 SETAIMDATA
+      - p.2197 SETAPODIZATION
+      - p.2197 SETCONFIG (keywords)
+      - p.2197 SETDETECTOR
+      - p.2198 SETMCOPERAND
+      - p.2199 SETNSCPARAMETER (keywords)
+      - p.2200 SETNSCPOSITION (keywords)
+      - p.2200 SETNSCPROPERTY (keywords)
+      - p.2208 SETOPERAND (keywords)
+      - p.2209 SETSTDD
+      - p.2209 SETSURFACEPROPERTY, SURP
+      - p.2216 SETSYSTEMPROPERTY, SYSP
+      - p.2220 SETTEXTSIZE
+      - p.2220 SETTITLE
+      - p.2220 SETTOL (keywords)
+      - p.2221 SETUNITS
+      - p.2221 SETVAR
+      - p.2222 SETVECSIZE
+      - p.2223 SETVIG (keywords)
+      - p.2223 SHOWBITMAP
+      - p.2224 SHOWFILE
+      - p.2224 SOLVEBEFORESTOP
+      - p.2225 SOLVERETURN
+      - p.2225 SOLVETYPE
+      - p.2229 STOPSURF
+      - p.2229 SUB
+      - p.2230 SURFTYPE
+      - p.2230 SUSPENDUPDATES
+      - p.2230 TELECENTRIC
+      - p.2231 TESTPLATEFIT
+      - p.2231 THIC
+      - p.2231 TIMER
+      - p.2232 TOLERANCE
+      - p.2233 UNLOCKWINDOW
+      - p.2233 UPDATE
+      - p.2234 VEC1, VEC2, VEC3, VEC4
+      - p.2235 WAVL, WWGT
+      - p.2235 XDIFFIA
+      - p.2236 ZBF2MAT
+      - p.2236 ZBFCLR
+      - p.2237 ZBFMULT
+      - p.2237 ZBFPROPERTIES
+      - p.2238 ZBFREAD
+      - p.2239 ZBFRESAMPLE
+      - p.2240 ZBFSHOW
+      - p.2240 ZBFSUM
+      - p.2241 ZBFTILT
+      - p.2241 ZBFWRITE
+      - p.2242 ZRD2MAT
+      - p.2242 ZRDAPPEND
+      - p.2243 ZRDFILTER
+      - p.2243 ZRDPLAYBACK
+      - p.2244 ZRDSAVERAYS
+      - p.2245 ZRDSUM
+    - p.2245 Example Macro 1
+    - p.2246 Example Macro 2
+    - p.2248 Calling a Macro from within a Macro
+    - p.2249 Running Macros from the Command Line
+    - p.2250 Using ZPL Macro Solves
+      - p.2251 Important Considerations for ZPL Macro Solves
+      - p.2252 Integer Codes for Column Numbers
+  - p.2252 Extensions Group
+    - p.2252 Extension List
+      - p.2253 Extensions Included with OpticStudio
+    - p.2254 Command Line Interface
+    - p.2255 Refresh List (extensions group)
+    - p.2255 Extensions Help
+  - p.2256 About Extensions
+    - p.2256 Introduction (about extensions)
+    - p.2258 Requirements for Writing Extensions
+    - p.2259 Establishing the Link
+    - p.2259 Comments on the DDE Timeout Interval
+    - p.2259 Terminating the link
+    - p.2260 Extracting data from OpticStudio
+    - p.2260 THE DATA ITEMS
+      - p.2260 CloseUDOData
+      - p.2260 DeleteConfig (the data items)
+      - p.2261 DeleteMCO (the data items)
+      - p.2261 DeleteMFO (the data items)
+      - p.2261 DeleteObject (the data items)
+      - p.2261 DeleteSurface
+      - p.2262 ExportCAD (the data items)
+      - p.2262 ExportCheck
+      - p.2263 FindLabel
+      - p.2263 GetAddress
+      - p.2263 GetAperture
+      - p.2264 GetApodization
+      - p.2264 GetAspect
+      - p.2264 GetBuffer
+      - p.2265 GetComment
+      - p.2265 GetConfig
+      - p.2265 GetDate
+      - p.2265 GetExtra
+      - p.2265 GetField
+      - p.2266 GetFile
+      - p.2266 GetFirst
+      - p.2266 GetGlass
+      - p.2267 GetGlobalMatrix
+      - p.2267 GetIndex
+      - p.2267 GetLabel
+      - p.2268 GetMulticon
+      - p.2268 GetName
+      - p.2268 GetNSCData
+      - p.2268 GetNSCMatrix
+      - p.2269 GetNSCObjectData
+      - p.2270 GetNSCObjectFaceData
+      - p.2271 GetNSCParameter
+      - p.2271 GetNSCPosition
+      - p.2271 GetNSCProperty
+      - p.2272 GetNSCSettings
+      - p.2272 GetNSCSolve
+      - p.2272 GetOperand
+      - p.2273 GetPath
+      - p.2273 GetPolState
+      - p.2273 GetPolTrace
+      - p.2274 GetPolTraceDirect
+      - p.2274 GetPupil
+      - p.2275 GetRefresh
+      - p.2275 GetSag
+      - p.2275 GetSequence
+      - p.2276 GetSerial
+      - p.2276 GetSettingsData
+      - p.2276 GetSolve
+      - p.2277 GetSurfaceData
+      - p.2278 GetSurfaceDLL
+      - p.2279 GetSurfaceParameter
+      - p.2279 GetSystem
+      - p.2279 GetSystemAper
+      - p.2280 GetSystemProperty
+      - p.2280 GetTextFile (the data items)
+      - p.2281 GetTol
+      - p.2281 GetTrace
+      - p.2282 GetTraceDirect
+      - p.2283 GetUDOSystem
+      - p.2283 GetUpdate
+      - p.2284 GetVersion
+      - p.2284 GetWave
+      - p.2284 GlobalToLocal (the data items)
+      - p.2284 Hammer (the data items)
+      - p.2285 ImportExtraData (the data items)
+      - p.2285 InsertConfig
+      - p.2285 InsertMCO (the data items)
+      - p.2286 InsertMFO (the data items)
+      - p.2286 InsertObject (the data items)
+      - p.2286 InsertSurface
+      - p.2286 LoadDetector
+      - p.2287 LoadFile
+      - p.2287 LoadMerit
+      - p.2288 LoadTolerance (the data items)
+      - p.2288 LocalToGlobal (the data items)
+      - p.2288 MakeGraphicWindow
+      - p.2289 MakeTextWindow
+      - p.2290 ModifySettings (the data items)
+      - p.2291 NewLens
+      - p.2291 NSCCoherentData
+      - p.2291 NSCDetectorData
+      - p.2291 NSCLightningTrace
+      - p.2291 NSCTrace
+      - p.2292 OpenWindow
+      - p.2292 OperandValue
+      - p.2292 Optimize (the data items)
+      - p.2293 PushLens
+      - p.2293 PushLensPermission
+      - p.2294 QuickFocus (the data items)
+      - p.2294 ReleaseWindow
+      - p.2294 RemoveVariables (the data items)
+      - p.2295 SaveDetector (the data items)
+      - p.2295 SaveFile
+      - p.2295 SaveMerit (the data items)
+      - p.2295 SaveTolerance (the data items)
+      - p.2296 SetAperture
+      - p.2296 SetBuffer
+      - p.2297 SetConfig (the data items)
+      - p.2297 SetExtra
+      - p.2297 SetField
+      - p.2298 SetFloat
+      - p.2298 SetLabel
+      - p.2298 SetMulticon
+      - p.2299 SetNSCObjectData
+      - p.2299 SetNSCObjectFaceData
+      - p.2299 SetNSCPosition (the data items)
+      - p.2300 SetNSCParameter (the data items)
+      - p.2300 SetNSCProperty (the data items)
+      - p.2300 SetNSCSettings
+      - p.2301 SetNSCSolve
+      - p.2301 SetOperand (the data items)
+      - p.2301 SetPolState
+      - p.2302 SetSettingsData
+      - p.2302 SetSolve
+      - p.2302 SetSurfaceData
+      - p.2303 SetSurfaceParameter
+      - p.2303 SetSystem
+      - p.2303 SetSystemAper
+      - p.2303 SetSystemProperty
+      - p.2304 SetTol (the data items)
+      - p.2304 SetUDOData
+      - p.2304 SetUDOItem
+      - p.2304 SetVig (the data items)
+      - p.2305 SetWave
+      - p.2305 WindowMaximize
+      - p.2305 WindowMinimize
+      - p.2305 WindowRestore
+    - p.2306 Tracing Large Numbers of Rays
+      - p.2306 Step 1: Placing the Ray Data in the Array
+        - p.2307 Mode 0: Similar to GetTrace
+        - p.2309 Mode 1: Similar to GetTraceDirect
+        - p.2310 Mode 2: Similar to GetPolTrace
+        - p.2311 Mode 3: Similar to GetPolTraceDirect
+        - p.2313 Mode 5: For Tracing Non-sequential Rays
+      - p.2314 Step 2: Pass the Array to OpticStudio
+    - p.2315 How OpticStudio Calls the Client
+    - p.2316 Generating a Text Window
+    - p.2317 Generating a Graphic Window
+      - p.2317 ADDRESS (generating a graphic window)
+      - p.2317 BOX
+      - p.2317 DATA (generating a graphic window)
+      - p.2318 DATE
+      - p.2318 FRAME
+      - p.2318 GRID
+      - p.2318 LENSNAME
+      - p.2319 LINE (generating a graphics window)
+      - p.2319 NOFRAME
+      - p.2319 PENSTYLE
+      - p.2319 TEXT
+      - p.2320 TITLE
+    - p.2320 A Sample Extension Program
+    - p.2321 The DDE_DEMO Code
+    - p.2321 A Simplified Technique for Implementing Extensions
+      - p.2321 The ZCLIENT Program
+      - p.2324 A Sample Extension Program Using ZCLIENT
+      - p.2324 Writing Extensions from the PhasePlot Template
+      - p.2324 Getting Analysis Data Using GetTextFile
+  - p.2325 String Codes
+  - p.2331 ZOS-API.NET Applications Group
+    - p.2331 User Analyses
+      - p.2332 User Analyses Included with OpticStudio
+    - p.2333 User Extensions
+      - p.2333 User Extensions Included with OpticStudio
+    - p.2334 Interactive Extension
+    - p.2335 Help System (zos-api.net applications group)
+    - p.2336 ZOS-API Syntax Help (zos-api.net applications group)
+  - p.2338 ZOS-API.NET Application Builders Group
+    - p.2339 C#
+    - p.2339 C++
+    - p.2340 Mathematica
+    - p.2341 MATLAB
+    - p.2341 Python
+  - p.2342 About the ZOS-API
+    - p.2342 Introduction (about the zos-api)
+    - p.2344 Get Connected…
+      - p.2345 Manually Creating a Project (Using Visual Studio)
+      - p.2354 Automatically Creating a Project (For Visual Studio)
+        - p.2356 ZOS Standalone Applications (Your Application Uses ZOS)
+        - p.2356 ZOS Inherent (ZOS Uses Your Application)
+        - p.2359 Final Thoughts…
+        - p.2359 Cautionary Notes About the Boilerplate Code…
+    - p.2360 IZOSAPI_Application TheApplication
+      - p.2360 Void TheApplication.CloseApplication()
+      - p.2361 LicenseStatusType TheApplication.LicenseStatus (Read Only)
+        - p.2361 LicenseStatusType (Intellisense Screenshot)
+      - p.2361 ZOSAPI_Mode TheApplication.Mode (Read Only)
+        - p.2361 ZOSAPI_Mode (Intellisense Screenshot)
+      - p.2362 Working With IOpticalSystem at the Application Level
+        - p.2362 IOpticalSystem TheApplication.PrimarySystem (Read Only)
+        - p.2362 int TheApplication.NumberOfOpticalSystems (Read Only)
+        - p.2362 IOpticalSystem NewSystem(SystemType type)
+        - p.2362 IOpticalSystem LoadNewProject(String newProject)
+        - p.2363 IOpticalSystem GetSystemAt(int n)
+        - p.2363 bool CloseSystemAt(int n, bool saveIfNeeded)
+      - p.2363 The ‘Samples’ Folder (TheApplication.SampleDir)
+    - p.2363 IOpticalSystem ThePrimarySystem
+      - p.2363 File Operations
+        - p.2364 ‘LoadFile’: Loading a Lens File (.ZMX)
+        - p.2364 ‘New’: Create a new (default) Lens Data File (Lens.ZMX)
+        - p.2364 ‘Save’: Save the existing System
+        - p.2364 ‘SaveAs’: Save the current System to a new file (.ZMX)
+        - p.2364 ‘Close’: Close the currently open System
+    - p.2365 ISystemData TheSystemData
+      - p.2365 ISDApertureData Aperture
+        - p.2365 ZemaxApertureType ApertureType
+        - p.2366 Double ApertureValue
+        - p.2366 ZemaxApodizationType ApodizationType
+        - p.2366 Double ApodizationFactor
+        - p.2366 Bool ApodizationFactorIsUsed
+        - p.2366 Double SemiDiameterMargin
+        - p.2367 Double SemiDiameterMarginPct
+        - p.2367 ISurfaceSelection GCRS (Read Only)
+        - p.2367 Bool TelecentricObjectSpace
+        - p.2367 Bool AFocalImageSpace
+        - p.2367 Bool IterateSolvesWhenUpdating
+        - p.2368 Bool FastSemiDiameters
+        - p.2368 Bool CheckGRINApertures
+      - p.2368 IFields Fields
+        - p.2369 IField members
+        - p.2369 FieldType (Intellisense Screenshot)
+      - p.2370 IWavelengths Wavelengths
+        - p.2371 Iwavelength
+        - p.2371 WavelengthPreset (Intellisense Screenshot)
+        - p.2371 QuadratureSteps (Intellisense Screenshot)
+      - p.2372 ISDEnvironmentData Environment
+        - p.2372 Double Temperature
+        - p.2372 Double Pressure
+        - p.2372 Bool AdjustIndexToEnvironment
+      - p.2373 ISDPolarizationData Polarization
+        - p.2373 Bool Unpolarized
+        - p.2373 PolarizationMethod Method
+        - p.2373 Bool ConvertThinFilmPhaseToRayEquivalent
+        - p.2374 Double Jx, Jy, XPhase, YPhase
+      - p.2374 ISDAdvancedData Advanced
+        - p.2374 ReferenceOPDSetting ReferenceOPD
+        - p.2374 ParaxialRaysSetting ParaxialRays
+        - p.2375 FNumberComputationType FNumMethod
+        - p.2375 Bool DontPrintCoordinateBreakData
+        - p.2375 Bool TurnOffThreading
+        - p.2375 Bool OPDModulo2PI
+        - p.2375 Bool IncludeCalculatedDataInSessionFile
+      - p.2376 ISDRayAimingData RayAiming
+        - p.2376 RayAimingMethod RayAiming
+        - p.2376 Bool UseRayAimingCache
+        - p.2376 Bool UseRobustRayAiming
+        - p.2377 Bool ScalePupilShiftFactorsByField
+        - p.2377 Double PupilShiftX, PupilShiftY, PupilShiftZ
+        - p.2377 Double PupilCompressX, PupilCompressY
+      - p.2377 ISDMaterialCatalogData MaterialCatalogs
+        - p.2377 String[] GetCatalogsInUse()
+        - p.2377 String[] GetAvailableCatalogs()
+        - p.2378 Bool IsCatalogInUse(string catalog)
+        - p.2378 Bool RemoveCatalog(string catalog)
+        - p.2378 Bool AddCatalog(string catalog)
+      - p.2378 ISDTitleNotes TitleNotes
+        - p.2378 String Title
+        - p.2378 String Notes
+      - p.2379 ISDFiles Files
+        - p.2379 String[] GetCoatingFiles()
+        - p.2379 String CoatingFile
+        - p.2379 String[] GetScatterProfiles()
+        - p.2379 String ScatterProfile
+        - p.2379 String[] GetABgDataFiles()
+        - p.2380 String ABgDataFile
+        - p.2380 String[] GetGradiumProfiles()
+        - p.2380 String GradiumProfile
+        - p.2380 Void ReloadFiles()
+      - p.2380 ISDUnitsData Units
+        - p.2380 ZemaxSystemUnits LensUnits
+        - p.2381 ZemaxUnitPrefix SourceUnitPrefix
+        - p.2381 ZemaxSourceUnits SourceUnits
+        - p.2382 ZemaxUnitPrefix AnalysisUnitPrefix
+        - p.2382 ZemaxAnalysisUnits AnalysisUnits
+        - p.2383 ZemaxAfocalModeUnits AfocalModeUnits
+        - p.2383 ZemaxMTFUnits MTFUnits
+    - p.2383 Analysis
+      - p.2384 Starting an Analysis
+      - p.2384 Viewing Analysis Information
+      - p.2385 Changing Settings
+      - p.2387 Generating Results
+      - p.2387 Getting Results
+        - p.2388 IAR_MetaData MetaData
+        - p.2388 IAR_DataGrid[] DataGrids
+        - p.2390 IAR_DataGridRgb[] DataGridsRgb
+        - p.2390 IAR_DataSeries[] DataSeries
+    - p.2392 The Lens Data Editor (ILensDataEditor)
+      - p.2393 ILDERow SurfaceType <XXX link to Sequential Surfaces>
+        - p.2394 Fundamental Data available to SurfaceType
+        - p.2394 Data specific to SurfaceType
+      - p.2394 ISurfaceTypeSettings
+      - p.2395 ILDERow ‘Surface Properties’
+      - p.2395 ILDETypeData TypeData
+        - p.2395 ZemaxColor (Intellisense Screenshot)
+        - p.2396 ZemaxOpacity (Intellisense Screenshot)
+      - p.2396 ILDEDrawData DrawData
+      - p.2397 ILDEApertureData ApertureData
+        - p.2397 SurfaceApertureTypes (Intellisense Screenshot)
+      - p.2398 ILDEScatteringData ScatteringData
+        - p.2398 SurfaceScatteringTypes (Intellisense Screenshot)
+      - p.2398 ILDETiltDecenterData TiltDecenterData
+        - p.2399 TiltDecenterOrderType (Intellisense Screenshot)
+        - p.2399 TiltDecenterPickupType (Intellisense Screenshot)
+      - p.2399 ILDEPhysicalOpticsData PhysicalOpticsData
+        - p.2400 XYSampling (Intellisense Screenshot)
+        - p.2400 PilotRadiusMode (Intellisense Screenshot)
+      - p.2400 ILDECoatingData CoatingData
+        - p.2401 ILDECoatingSettings
+        - p.2402 CoatingsStatusType (Intellisense Screenshot)
+      - p.2402 ILDEImportData ImportData
+      - p.2402 IeditorCell (the lens data editor)
+        - p.2403 SurfaceColumn (Intellisense Screenshot)
+    - p.2403 The Non-sequential Component Editor (INonSeqEditor)
+      - p.2405 INCERow ObjectType <XXXLink to Summary of NSC Objects>
+        - p.2406 Fundamental Data Available to all ObjectTypes
+        - p.2406 Data Specific to ObjectType
+        - p.2406 IobjectTypeSettings
+      - p.2407 INCETypeData TypeData
+      - p.2408 INCEDrawData DrawData
+      - p.2409 INCESourcesData SourcesData
+      - p.2409 INCECoatScatterData CoatScatterData
+      - p.2410 INCEScatterToData ScatterToData
+      - p.2410 INCEVolumePhysicsData VolumePhysicsData
+      - p.2410 INCEIndexData IndexData
+      - p.2411 INCEDiffractionData DiffractionData
+      - p.2412 INCECADData CADData
+    - p.2413 The Merit Function Editor (IMeritFunctionEditor)
+      - p.2415 IMFERow MeritOperandType <XXXLink to Merit Operand Type>
+      - p.2415 Fundamental Data Available to all MeritOperandTypes
+      - p.2416 Data Specific to MeritOperandTypes
+    - p.2416 The Tolerance Data Editor (IToleranceDataEditor)
+      - p.2417 ITDERow ToleranceOperandType <XXXLink to Tolerance Operand Types>
+      - p.2418 Fundamental Data Available to All ToleranceOperandTypes
+      - p.2418 Data Specific to ToleranceOperandType
+    - p.2418 The Multi-Configuration Editor
+      - p.2421 IMCERow MultiConfigOperandType <XXXLink to Multiconfig Operand types>
+      - p.2422 Fundamental Data Available to all MultiConfigOperandTypes
+      - p.2422 Data Specific to MultiConfigOperandType
+      - p.2423 Visit Each Operand Cell (Value) in Each Configuration
+    - p.2423 IeditorCell (about the zos-api)
+      - p.2424 Get an IEditorCelL in the…
+        - p.2424 …Lens Data Editor (LDE)
+        - p.2424 …Nonsequential Component Editor (NCE)
+        - p.2424 …Merit Function Editor (MFE)
+        - p.2424 …Tolerance Data Editor (TDE)
+        - p.2424 …Multi-Configuation Editor (MCE)
+      - p.2425 Fundamental Value Data Available to All IEditorCells
+      - p.2426 Fundamental ‘Solve’ Data Available to All IEditorCells
+    - p.2427 IOpticalSystemTools ThePrimarySystem.Tools
+      - p.2428 ISystemTool Tools.CurrentTool
+      - p.2430 IGlobalOptimization OpenGlobalOptimization
+      - p.2431 IHammerOptimization OpenHammerOptimization
+      - p.2432 ICreateArchive OpenCreateZAR
+      - p.2432 IRestoreArchive OpenRestoreArchive
+      - p.2433 IExportCAD OpenExportCAD
+    - p.2435 User Operand
+    - p.2436 User Analysis
+      - p.2436 Initializing Local Variables to Access User Analysis Data and Settings
+      - p.2436 Settings – Interacting with the User at Runtime
+        - p.2437 Initialize the Settings Variables
+      - p.2438 If(TheApplication.Mode == ZOSAPI_Mode.UserAnalysisSettings)
+      - p.2438 If(TheApplication.Mode == ZOSAPI_Mode.UserAnalysis)
+        - p.2439 1D Line Plot
+        - p.2439 2D Grid Plot
+        - p.2440 2D RGB Grid Plot
+        - p.2440 Text Data
+    - p.2441 Plug-In/Extension
+    - p.2443 Tracing Large Numbers of Rays (About the ZOS-API)
+      - p.2446 Batch Ray Trace Modes (About the ZOS-API)
+        - p.2448 IRayTraceNormUnpolData
+        - p.2450 IRayTraceDirectUnpolData
+        - p.2451 IRayTraceNormPolData
+        - p.2452 IRayTraceDirectPolData
+        - p.2453 IRayTraceNSCData
+- p.2456 The STAR Tab
+  - p.2457 FEA Data Group
+    - p.2457 FEA Data Viewer
+    - p.2458 Load FEA Data
+    - p.2462 Fit Assessment
+    - p.2464 Alignment Check
+  - p.2465 Data Summary Group
+    - p.2465 Structural Summary
+    - p.2466 Structural Options
+    - p.2467 Thermal Summary
+  - p.2468 Analyses Group
+    - p.2468 System Viewer
+    - p.2470 Performance Analysis
+    - p.2473 2D Deformation Plot
+    - p.2473 Thermal Index Plot
+  - p.2474 FEA Fitting Process and RBMs
+- p.2477 The Help Tab
+  - p.2477 Information Group
+    - p.2477 About
+    - p.2478 License Agreement
+    - p.2479 License Utility
+      - p.2481 Manage my license
+      - p.2482 Borrowing a license for offline use
+  - p.2485 Documentation Group
+    - p.2485 Help System (documentation group)
+    - p.2486 Help PDF
+    - p.2486 ZOS-API Syntax Help (documentation group)
+    - p.2488 What’s New
+  - p.2488 Websites Group
+    - p.2488 Knowledgebase
+    - p.2489 Community Forum
+    - p.2489 Downloads and Support
+  - p.2490 Utilities Group
+    - p.2490 System Diagnostic
+    - p.2491 Zemax File Collector
+    - p.2493 Feature Finder
+  - p.2494 Test Lab Group
+    - p.2495 Deprecated Features
+      - p.2495 IS Scatter Catalog Data
+      - p.2497 Radiant Source Models
+        - p.2498 Download Radiant Source Models
+        - p.2500 Radiant Source Model™ Viewer
+        - p.2502 Generate Radiant Source Model Rays
+      - p.2508 ReverseRadiance
+    - p.2513 Feature Experiments
+    - p.2513 Research Surveys
+  - p.2514 Search Bar (help tab)
+- p.2516 General Information
+  - p.2516 Important Notice
+  - p.2516 References on Lens Design
+- p.2518 Conventions and Definitions
+  - p.2518 Active Configuration
+  - p.2518 Angular Magnification
+  - p.2518 Apodization
+  - p.2518 Back Focal Length
+  - p.2519 Cardinal Planes
+  - p.2519 Chief Ray
+  - p.2520 Coordinate Axes
+  - p.2520 Diffraction Limited
+  - p.2521 Edge Thickness
+  - p.2521 Effective Focal Length
+  - p.2522 Entrance Pupil Diameter
+  - p.2522 Entrance Pupil Position
+  - p.2522 Exit Pupil Diameter
+  - p.2522 Exit Pupil Position
+  - p.2523 Field Angles and Heights
+  - p.2524 Float by Stop Size
+  - p.2524 Ghost Reflections
+  - p.2524 Glasses
+  - p.2525 Hexapolar Rings
+  - p.2525 Image Space F/#
+  - p.2526 Image Space Numerical Aperture (NA)
+  - p.2526 Lens Units
+  - p.2526 Marginal Ray
+  - p.2526 Maximum Field
+  - p.2527 Mixed Mode
+  - p.2527 Native Object
+  - p.2527 Non-Paraxial Systems
+  - p.2528 Non-sequential Ray Tracing
+  - p.2528 Normalized Field Coordinates
+  - p.2532 Normalized Pupil Coordinates
+  - p.2533 NSC
+  - p.2534 Object Space Numerical Aperture
+  - p.2534 Parameter Data
+  - p.2534 Paraxial and Parabasal Rays
+  - p.2535 Paraxial Image Height
+  - p.2536 Paraxial Magnification
+  - p.2536 Paraxial Working F/#
+  - p.2536 Primary Wavelength
+  - p.2536 Radii
+  - p.2537 Real propagation
+  - p.2537 Sagittal and Tangential
+  - p.2538 Semi-Diameters
+  - p.2539 Sequential Ray Tracing
+  - p.2539 Special Characters
+  - p.2539 Strehl Ratio
+  - p.2540 Surface Apertures
+  - p.2540 System Aperture
+  - p.2540 Thicknesses
+  - p.2541 Total Internal Reflection (TIR)
+  - p.2541 Total Track
+  - p.2541 Vignetting Factors
+  - p.2544 Virtual Propagation
+  - p.2544 Wavelength Data
+  - p.2545 Working F/#
+- p.2547 Index
