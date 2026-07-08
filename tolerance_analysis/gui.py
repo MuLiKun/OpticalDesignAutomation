@@ -249,7 +249,8 @@ class _Worker(QtCore.QObject):
                     self._standard_args["center_wave"],
                     self._standard_args["comp_mode"],
                     self._standard_args["save_worst_best"],
-                    product_type=self._standard_args["product_type"])
+                    product_type=self._standard_args["product_type"],
+                    all_surfaces=self._standard_args["all_surfaces"])
                 self.log.emit(f"标准模板配置: {config}")
 
             prep = pipeline.prepare_session(
@@ -322,6 +323,7 @@ class _Worker(QtCore.QObject):
                 stat_path = result.ztd_path.rsplit(".", 1)[0] + "_统计.xlsx"
                 out = ztd_reader.export_excel(zres, stat_path)
                 run_log(f"统计 Excel: {out}")
+                pipeline.export_sensitivity(prep, result.ztd_path, stat_path=out, log=run_log)
 
             self.finished.emit(True, result.ztd_path)
         except zos_connect.ZosDirNotFound as e:
@@ -429,6 +431,12 @@ class _ZtdWorker(QtCore.QObject):
             stat_path = os.path.join(ztd_dir, base + "_统计.xlsx")
             out = ztd_reader.export_excel(zres, stat_path)
             self.log.emit(f"统计 Excel: {out}")
+            if tde_meta:
+                out = pipeline._export_sensitivity_raw(
+                    sess.sys, self._ztd, report_meta, report_labels,
+                    tde_meta, stat_path=out, log=self.log.emit) or out
+            else:
+                self.log.emit("敏感度排序跳过：缺少 run_config.json 中的 TDE 元数据。")
             self.finished.emit(True, out)
         except zos_connect.ZosDirNotFound as e:
             self.need_zos_dir.emit(list(e.searched))
@@ -649,12 +657,19 @@ class MainWindow(QtWidgets.QMainWindow):
             self.cb_comp.setCurrentIndex(idx)
         self.chk_save_worst_best = QtWidgets.QCheckBox("保存 WC/BC")
         self.chk_save_worst_best.setChecked(_yes(self._setting("standard_save_worst_best", "N")))
+        self.cb_all_surfaces = QtWidgets.QComboBox()
+        self.cb_all_surfaces.addItems(["是", "否"])
+        self.cb_all_surfaces.setToolTip("是=保持当前全部面标准分析；否=按 TX/RX 和滤光片自动只保留镜头面。")
+        idx = self.cb_all_surfaces.findText(self._setting("standard_all_surfaces", "是"))
+        if idx >= 0:
+            self.cb_all_surfaces.setCurrentIndex(idx)
         self.lb_product_type = QtWidgets.QLabel("产品")
         self.lb_std_template = QtWidgets.QLabel("模板")
         self.lb_tol_level = QtWidgets.QLabel("等级")
         self.lb_runs = QtWidgets.QLabel("MC")
         self.lb_save = QtWidgets.QLabel("保存")
         self.lb_comp = QtWidgets.QLabel("补偿")
+        self.lb_all_surfaces = QtWidgets.QLabel("全部面")
         std.addWidget(self.lb_product_type, 0, 0)
         std.addWidget(self.cb_product_type, 0, 1)
         std.addWidget(self.lb_std_template, 0, 2)
@@ -667,7 +682,9 @@ class MainWindow(QtWidgets.QMainWindow):
         std.addWidget(self.sp_save, 1, 3)
         std.addWidget(self.lb_comp, 1, 4)
         std.addWidget(self.cb_comp, 1, 5)
-        std.addWidget(self.chk_save_worst_best, 1, 6)
+        std.addWidget(self.lb_all_surfaces, 1, 6)
+        std.addWidget(self.cb_all_surfaces, 1, 7)
+        std.addWidget(self.chk_save_worst_best, 1, 8)
         std.setColumnStretch(3, 1)
         self.lb_standard_panel = QtWidgets.QLabel("标准模板：")
         params_form.addWidget(self.lb_standard_panel, 1, 0)
@@ -919,6 +936,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._settings.setValue("standard_runs", self.sp_runs.value())
         self._settings.setValue("standard_save", self.sp_save.value())
         self._settings.setValue("standard_comp", self.cb_comp.currentText())
+        self._settings.setValue("standard_all_surfaces", self.cb_all_surfaces.currentText())
         self._settings.setValue(
             "standard_save_worst_best",
             "Y" if self.chk_save_worst_best.isChecked() else "N")
@@ -960,6 +978,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.cb_product_type.setEnabled(use_standard)
         self.cb_std_template.setEnabled(use_standard)
         self.cb_tol_level.setEnabled(use_standard)
+        self.cb_all_surfaces.setVisible(use_standard)
+        self.lb_all_surfaces.setVisible(use_standard)
+        self.cb_all_surfaces.setEnabled(use_standard)
         if hasattr(self, "lb_standard_panel"):
             self.lb_standard_panel.setVisible(use_standard or use_current)
             self.lb_standard_panel.setText("标准模板：" if use_standard else "运行参数：")
@@ -1011,6 +1032,7 @@ class MainWindow(QtWidgets.QMainWindow):
             "center_wave": 0,
             "comp_mode": self.cb_comp.currentText(),
             "save_worst_best": self.chk_save_worst_best.isChecked(),
+            "all_surfaces": self.cb_all_surfaces.currentText().strip() != "否",
         }
 
     def _current_args_from_ui(self) -> dict:
@@ -1040,7 +1062,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 center_wave=0,
                 comp_mode=self.cb_comp.currentText(),
                 save_worst_best=self.chk_save_worst_best.isChecked(),
-                product_type=self.cb_product_type.currentText())
+                product_type=self.cb_product_type.currentText(),
+                all_surfaces=self.cb_all_surfaces.currentText().strip() != "否")
             return pipeline.validate_config_data(cfg)
         return pipeline.validate_config(zmx, config)
 
@@ -1145,7 +1168,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 num_runs=args["num_runs"], num_to_save=args["num_to_save"],
                 center_wave=args["center_wave"], comp_mode=args["comp_mode"],
                 save_worst_best=args["save_worst_best"],
-                product_type=args["product_type"])
+                product_type=args["product_type"],
+                all_surfaces=args["all_surfaces"])
             standard_templates.write_config_excel(path, cfg, overwrite=True)
         except Exception as e:
             self._warn("导出标准配置失败：\n" + str(e))
@@ -1193,6 +1217,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 f"产品={standard_args['product_type']} 模板={standard_args['template']} 等级={standard_args['level']} "
                 f"MC={standard_args['num_runs']} 保存={standard_args['num_to_save']} "
                 f"补偿={standard_args['comp_mode']} "
+                f"全部面={'Y' if standard_args['all_surfaces'] else 'N'} "
                 f"保存WC/BC={'Y' if standard_args['save_worst_best'] else 'N'}")
         elif use_current:
             self._append_log("分析模式: 使用 Zemax 当前设置")
