@@ -15,7 +15,8 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from . import (zos_connect, excel_io, tde_builder, mfe_builder,
-               tsc_builder, tol_runner, field_mapping, current_settings)
+               tsc_builder, tol_runner, field_mapping, current_settings,
+               sensitivity_reader)
 
 
 def _as_int(v, default: int) -> int:
@@ -408,6 +409,143 @@ def validate_config(zmx: str, config: str):
     return validate_config_data(cfg)
 
 
+_FILTER_MATERIALS = {"AF32ECO", "D263TECO"}
+
+
+def _read_zmx_text(path: str) -> str:
+    with open(path, "rb") as f:
+        data = f.read()
+    for enc in ("utf-16", "utf-8-sig", "mbcs", "latin1"):
+        try:
+            return data.decode(enc)
+        except (UnicodeDecodeError, LookupError):
+            continue
+    return data.decode("latin1", errors="ignore")
+
+
+def _parse_zmx_surfaces(path: str) -> list[dict]:
+    surfaces: list[dict] = []
+    current: dict | None = None
+    for raw in _read_zmx_text(path).splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        parts = line.split()
+        key = parts[0].upper()
+        if key == "SURF" and len(parts) >= 2:
+            try:
+                idx = int(float(parts[1]))
+            except ValueError:
+                current = None
+                continue
+            current = {"surface": idx, "curv": None, "glass": ""}
+            surfaces.append(current)
+            continue
+        if current is None:
+            continue
+        if key == "CURV" and len(parts) >= 2:
+            current["curv"] = _num(parts[1])
+        elif key == "GLAS" and len(parts) >= 2:
+            current["glass"] = parts[1].strip()
+    return surfaces
+
+
+def _surface_map(surfaces: list[dict]) -> dict[int, dict]:
+    return {int(s.get("surface", -1)): s for s in surfaces}
+
+
+def _is_plane_surface(surface: dict | None) -> bool:
+    if not surface:
+        return False
+    curv = surface.get("curv")
+    return curv is not None and abs(float(curv)) <= 1e-12
+
+
+def _is_filter_surface(surface: dict) -> bool:
+    return str(surface.get("glass") or "").strip().upper() in _FILTER_MATERIALS
+
+
+def _rx_start_after_front_plate(surfaces: list[dict], start: int, stop: int) -> int:
+    by_no = _surface_map(surfaces)
+    cur = int(start)
+    while cur + 1 <= stop:
+        s0 = by_no.get(cur)
+        s1 = by_no.get(cur + 1)
+        if not (_is_plane_surface(s0) and _is_plane_surface(s1)):
+            break
+        if not str(s0.get("glass") or "").strip():
+            break
+        cur += 2
+    return cur
+
+
+def _wizard_current_range(cfg) -> tuple[int, int]:
+    starts, stops = [], []
+    for row in cfg.tol_wizard:
+        if not _yes(row.get("启用")):
+            continue
+        s0 = _as_int(row.get("起始面"), 0)
+        s1 = _as_int(row.get("结束面"), 0)
+        if s0 > 0:
+            starts.append(s0)
+        if s1 > 0:
+            stops.append(s1)
+    return (min(starts) if starts else 1, max(stops) if stops else 0)
+
+
+def _set_wizard_range(cfg, start: int, stop: int) -> None:
+    for row in cfg.tol_wizard:
+        if _yes(row.get("启用")):
+            row["起始面"] = int(start)
+            row["结束面"] = int(stop)
+
+
+def _apply_standard_surface_scope_from_zmx(zmx: str, cfg, rp: dict, log=print) -> None:
+    if str(rp.get("分析模式") or "").strip() != "标准模板":
+        return
+    if _yes(rp.get("全部面公差分析", "Y")):
+        return
+    if str(rp.get("标准模板") or "").strip() != "标准分析":
+        log("标准模板镜头面裁剪：全部面=否 仅支持『标准分析』模板，当前模板已按全部面生成。")
+        return
+    product_type = str(rp.get("产品类型") or "RX").strip().upper()
+    if product_type not in ("TX", "RX"):
+        log(f"标准模板镜头面裁剪：产品类型 {product_type!r} 无效（仅支持 TX/RX），已按全部面生成。")
+        return
+    try:
+        surfaces = _parse_zmx_surfaces(zmx)
+    except Exception as e:
+        log(f"标准模板镜头面裁剪：读取 ZMX 失败，已按全部面生成。{type(e).__name__}: {e}")
+        return
+    if not surfaces:
+        log("标准模板镜头面裁剪：未从镜头文件读取到面数据（可能为 .zos 二进制或非标准格式），已按全部面生成。")
+        return
+    filters = [int(s["surface"]) for s in surfaces if _is_filter_surface(s)]
+    if not filters:
+        log("标准模板镜头面裁剪：未找到 AF32ECO/D263TECO 滤光片，已按全部面生成。")
+        return
+    base_start, base_stop = _wizard_current_range(cfg)
+    if base_stop <= 0:
+        log("标准模板镜头面裁剪：当前公差范围无效，已按全部面生成。")
+        return
+    if product_type == "TX":
+        boundary = max(filters)
+        start, stop = boundary + 2, base_stop
+        reason = f"TX 取最后一个滤光片 {boundary} 面之后"
+    else:
+        boundary = min(filters)
+        start = _rx_start_after_front_plate(surfaces, base_start, boundary - 1)
+        stop = boundary - 1
+        reason = f"RX 取第一个滤光片 {boundary} 面之前"
+    start = max(base_start, start)
+    stop = min(base_stop, stop)
+    if start > stop:
+        log(f"标准模板镜头面裁剪：{reason} 后范围无效({start}-{stop})，已按全部面生成。")
+        return
+    _set_wizard_range(cfg, start, stop)
+    log(f"标准模板镜头面裁剪：全部面=否，{reason}，最终公差范围 {start}-{stop}。")
+
+
 def _fill_auto_standard_surfaces(zos_system, cfg, rp: dict, log=print) -> None:
     if str(rp.get("分析模式") or "").strip() != "标准模板":
         return
@@ -780,6 +918,7 @@ def prepare_session(zmx: str, config: str, outdir: str | None = None,
                 row["Param2"] = center_wave
         log(f"已自动使用主波长号: {center_wave}")
     _fill_auto_standard_surfaces(sess.sys, cfg, rp, log=log)
+    _apply_standard_surface_scope_from_zmx(zmx, cfg, rp, log=log)
 
     cfg, field_mapping_result = field_mapping.process(sess.sys, cfg, rp, log=log)
     field_mapping_report_path = ""
@@ -971,3 +1110,54 @@ def run_montecarlo(prep: Prepared, log=print,
         log(f"  [{progress:>3}%] {msg}")
 
     return tol_runner.run(prep.sess.sys, spec, progress_cb=on_progress)
+
+
+def _export_sensitivity_raw(zos_system, ztd_path: str, report_meta, report_labels,
+                            tde_meta, stat_path: str = "", log=print) -> str:
+    """敏感度排序的底层实现，仅依赖 ZOS 系统对象与元数据（不依赖 Prepared）。
+
+    供 export_sensitivity() 和 GUI 的 _ZtdWorker（读取已有 ZTD，无 Prepared）共用。
+    失败只记录日志并返回空字符串。
+    """
+    try:
+        report_labels = report_labels or [
+            str(r.get("标签")).strip() for r in (report_meta or []) if r.get("标签")
+        ]
+        if not report_labels:
+            log("敏感度排序跳过：缺少 REPORT 标签。")
+            return ""
+        if not tde_meta:
+            log("敏感度排序跳过：缺少 TDE 元数据。")
+            return ""
+        res = sensitivity_reader.read_sensitivity(
+            zos_system, ztd_path,
+            report_meta=report_meta or None,
+            report_labels=report_labels or None,
+            tde_meta=tde_meta or None)
+        if not res.succeeded:
+            log("敏感度排序未导出：" + (res.message or "未知原因"))
+            for key, value in res.diagnostics:
+                log(f"  敏感度诊断 {key}: {value}")
+            return ""
+        if stat_path:
+            out = sensitivity_reader.append_to_excel(res, stat_path)
+            log(f"敏感度排序已写入统计 Excel: {out}")
+            return out
+        path = ztd_path.rsplit(".", 1)[0] + "_敏感度排序.xlsx"
+        out = sensitivity_reader.export_excel(res, path)
+        log(f"敏感度排序 Excel: {out}")
+        return out
+    except Exception as e:
+        log(f"敏感度排序导出失败（已忽略）：{type(e).__name__}: {e}")
+        return ""
+
+
+def export_sensitivity(prep: Prepared, ztd_path: str, stat_path: str = "", log=print) -> str:
+    """从同一 ZTD 尝试把敏感度排序追加到统计 Excel；失败只记录日志并返回空字符串。"""
+    report_meta = prep.report_meta or [
+        r for r in prep.cfg.report if _yes(r.get("启用")) and r.get("标签")
+    ]
+    report_labels = [str(r.get("标签")).strip() for r in report_meta if r.get("标签")]
+    return _export_sensitivity_raw(
+        prep.sess.sys, ztd_path, report_meta, report_labels,
+        prep.tde_meta, stat_path=stat_path, log=log)
