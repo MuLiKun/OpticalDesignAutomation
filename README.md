@@ -75,6 +75,12 @@ zemax-skills-advance_TOL/
 .\.venv\Scripts\python.exe -u tolerance_analysis\tol_run.py --standard --zmx "镜头.zmx" --outdir "输出目录" --connect standalone --product-type RX --standard-template 标准分析 --tolerance-level 标准 --num-runs 20 --num-to-save 0
 ```
 
+普通标准模板模式，仅镜头面参与公差分析（按 TX/RX 与滤光片自动裁剪）：
+
+```powershell
+.\.venv\Scripts\python.exe -u tolerance_analysis\tol_run.py --standard --zmx "镜头.zmx" --outdir "输出目录" --connect standalone --product-type RX --standard-template 标准分析 --tolerance-level 标准 --num-runs 20 --num-to-save 0 --lens-only-surfaces
+```
+
 使用 Zemax 当前设置模式：
 
 ```powershell
