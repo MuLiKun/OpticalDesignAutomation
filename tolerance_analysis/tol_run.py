@@ -68,7 +68,8 @@ def _standard_config_path(args) -> str:
     return standard_templates.make_temp_config(
         args.zmx, args.outdir, args.standard_template, args.tolerance_level,
         args.num_runs, args.num_to_save, args.center_wave, args.comp_mode,
-        args.save_worst_best, product_type=args.product_type)
+        args.save_worst_best, product_type=args.product_type,
+        all_surfaces=not args.lens_only_surfaces)
 
 
 def _cmd_validate_only(args) -> int:
@@ -177,6 +178,9 @@ def _cmd_run(args) -> int:
             stat_path = result.ztd_path.rsplit(".", 1)[0] + "_统计.xlsx"
             out = ztd_reader.export_excel(zres, stat_path)
             pipeline.append_run_log(prep, f"统计 Excel: {out}")
+            pipeline.export_sensitivity(
+                prep, result.ztd_path, stat_path=out,
+                log=lambda m: pipeline.append_run_log(prep, m))
         return 0
     except Exception as e:
         message = f"读取/导出 ZTD 失败：{type(e).__name__}: {e}"
@@ -223,6 +227,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="标准模板/当前设置模式的补偿器模式")
     p.add_argument("--save-worst-best", action="store_true",
                    help="标准模板/当前设置模式下保存 Zemax Worst/Best case")
+    p.add_argument("--lens-only-surfaces", action="store_true",
+                   help="标准模板模式下不选全部面，按 TX/RX 与滤光片只保留镜头面")
     p.add_argument("--current-report-filter", choices=["all", "mtf", "common"],
                    default="all", help="当前设置模式 REPORT 筛选：all=全部有效行，mtf=仅 MTF 类，common=常用评价类")
     return p
@@ -233,6 +239,9 @@ def main(argv=None) -> int:
     if args.standard and args.current_settings:
         print("错误：--standard 与 --current-settings 不能同时使用。", file=sys.stderr)
         return 2
+    if args.lens_only_surfaces and not args.standard:
+        print("警告：--lens-only-surfaces 仅在 --standard 标准模板模式下生效，本次将被忽略。",
+              file=sys.stderr)
     if args.init_template:
         return _cmd_init_template(args)
     if args.read_only:
