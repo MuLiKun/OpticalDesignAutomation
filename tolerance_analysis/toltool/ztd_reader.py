@@ -580,6 +580,7 @@ def export_excel(result: ZtdResult, path: str) -> str:
         ("标准差", [it.std for it in result.items]),
         ("中位数", [it.median for it in result.items]),
     ]
+    stat_row_count = len(rows)
     for i in range(max_samples):
         values = [it.samples[i] if i < len(it.samples) else None
                   for it in result.items]
@@ -587,7 +588,7 @@ def export_excel(result: ZtdResult, path: str) -> str:
 
     for r, (name, values) in enumerate(rows, start=2):
         name_cell = ws.cell(row=r, column=1, value=name)
-        if r <= 8:
+        if r <= stat_row_count + 1:
             name_cell.fill = stat_fill
             name_cell.font = font
         else:
@@ -601,7 +602,7 @@ def export_excel(result: ZtdResult, path: str) -> str:
                 cell.fill = focus_fill
                 cell.font = font
 
-    ws.freeze_panes = "B9"
+    ws.freeze_panes = f"B{stat_row_count + 2}"
     ws.auto_filter.ref = ws.dimensions
     ws.column_dimensions["A"].width = 18
     for c in range(2, len(headers) + 1):
