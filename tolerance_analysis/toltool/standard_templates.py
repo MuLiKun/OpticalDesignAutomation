@@ -330,7 +330,8 @@ def build_config(zmx_path: str, template: str = DEFAULT_TEMPLATE_NAME, level: st
                  num_runs: int = 20, num_to_save: int = 0,
                  center_wave: int = 0, comp_mode: str = "无",
                  save_worst_best: bool = False,
-                 product_type: str = DEFAULT_PRODUCT_TYPE) -> excel_io.Config:
+                 product_type: str = DEFAULT_PRODUCT_TYPE,
+                 all_surfaces: bool = True) -> excel_io.Config:
     product_type = _normalize_product_type(product_type)
     template = template.strip() or DEFAULT_TEMPLATE_NAME
     level = level.strip() or "标准"
@@ -349,6 +350,7 @@ def build_config(zmx_path: str, template: str = DEFAULT_TEMPLATE_NAME, level: st
         run_params={
             "分析模式": "标准模板",
             "产品类型": product_type,
+            "全部面公差分析": "Y" if all_surfaces else "N",
             "标准模板": template,
             "公差等级": level,
             "蒙特卡洛次数": int(num_runs),
@@ -410,7 +412,8 @@ def default_config_path(zmx_path: str, outdir: str | None = None) -> str:
 def make_temp_config(zmx_path: str, outdir: str | None, template: str, level: str,
                      num_runs: int, num_to_save: int, center_wave: int,
                      comp_mode: str, save_worst_best: bool = False,
-                     product_type: str = DEFAULT_PRODUCT_TYPE) -> str:
+                     product_type: str = DEFAULT_PRODUCT_TYPE,
+                     all_surfaces: bool = True) -> str:
     parent = os.path.abspath(outdir) if outdir else os.path.dirname(os.path.abspath(zmx_path))
     os.makedirs(parent, exist_ok=True)
     base = os.path.splitext(os.path.basename(zmx_path))[0]
@@ -420,5 +423,6 @@ def make_temp_config(zmx_path: str, outdir: str | None, template: str, level: st
                        num_runs=num_runs, num_to_save=num_to_save,
                        center_wave=center_wave, comp_mode=comp_mode,
                        save_worst_best=save_worst_best,
-                       product_type=product_type)
+                       product_type=product_type,
+                       all_surfaces=all_surfaces)
     return write_config_excel(path, cfg, overwrite=False)
