@@ -42,6 +42,7 @@ hiddenimports = [
     "toltool.standard_templates",
     "toltool.field_mapping",
     "toltool.current_settings",
+    "toltool.sensitivity_reader",
 ]
 
 a = Analysis(
