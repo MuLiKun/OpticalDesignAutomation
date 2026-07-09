@@ -16,7 +16,7 @@ from datetime import datetime
 
 from . import (zos_connect, excel_io, tde_builder, mfe_builder,
                tsc_builder, tol_runner, field_mapping, current_settings,
-               sensitivity_reader)
+               sensitivity_reader, lens_scanner)
 
 
 def _as_int(v, default: int) -> int:
@@ -366,7 +366,8 @@ def _validate_inputs(cfg, rp: dict) -> None:
             errors.append(f"评价函数行号必须大于 0：{line_no}")
             continue
         valid_mfe_lines.add(line_no)
-    if not valid_mfe_lines:
+    dynamic_only = _yes(rp.get("启用动态评价项", "N")) and not valid_mfe_lines
+    if not valid_mfe_lines and not dynamic_only:
         errors.append("评价函数工作表至少需要 1 行带操作数的有效行")
 
     report_count = 0
@@ -389,7 +390,7 @@ def _validate_inputs(cfg, rp: dict) -> None:
         if mf_line_no not in valid_mfe_lines:
             errors.append(f"REPORT {label} 的 MF行号 {mf_line_no} 未在评价函数中找到")
         report_count += 1
-    if report_count == 0:
+    if report_count == 0 and not dynamic_only:
         errors.append("REPORT 至少需要启用 1 个带标签和 MF行号的分项")
 
     if errors:
@@ -409,71 +410,17 @@ def validate_config(zmx: str, config: str):
     return validate_config_data(cfg)
 
 
-_FILTER_MATERIALS = {"AF32ECO", "D263TECO"}
-
-
-def _read_zmx_text(path: str) -> str:
-    with open(path, "rb") as f:
-        data = f.read()
-    for enc in ("utf-16", "utf-8-sig", "mbcs", "latin1"):
-        try:
-            return data.decode(enc)
-        except (UnicodeDecodeError, LookupError):
-            continue
-    return data.decode("latin1", errors="ignore")
-
-
-def _parse_zmx_surfaces(path: str) -> list[dict]:
-    surfaces: list[dict] = []
-    current: dict | None = None
-    for raw in _read_zmx_text(path).splitlines():
-        line = raw.strip()
-        if not line:
-            continue
-        parts = line.split()
-        key = parts[0].upper()
-        if key == "SURF" and len(parts) >= 2:
-            try:
-                idx = int(float(parts[1]))
-            except ValueError:
-                current = None
-                continue
-            current = {"surface": idx, "curv": None, "glass": ""}
-            surfaces.append(current)
-            continue
-        if current is None:
-            continue
-        if key == "CURV" and len(parts) >= 2:
-            current["curv"] = _num(parts[1])
-        elif key == "GLAS" and len(parts) >= 2:
-            current["glass"] = parts[1].strip()
-    return surfaces
-
-
-def _surface_map(surfaces: list[dict]) -> dict[int, dict]:
-    return {int(s.get("surface", -1)): s for s in surfaces}
-
-
-def _is_plane_surface(surface: dict | None) -> bool:
-    if not surface:
-        return False
-    curv = surface.get("curv")
-    return curv is not None and abs(float(curv)) <= 1e-12
-
-
-def _is_filter_surface(surface: dict) -> bool:
-    return str(surface.get("glass") or "").strip().upper() in _FILTER_MATERIALS
-
-
-def _rx_start_after_front_plate(surfaces: list[dict], start: int, stop: int) -> int:
-    by_no = _surface_map(surfaces)
+def _rx_start_after_front_plate(surfaces: list[lens_scanner.SurfaceInfo],
+                                start: int, stop: int) -> int:
+    """RX：跳过物面后到镜头之间连续的双面平板玻璃（不限材料）。"""
+    by_no = {s.surface: s for s in surfaces}
     cur = int(start)
     while cur + 1 <= stop:
         s0 = by_no.get(cur)
         s1 = by_no.get(cur + 1)
-        if not (_is_plane_surface(s0) and _is_plane_surface(s1)):
+        if s0 is None or s1 is None or not (s0.is_plane and s1.is_plane):
             break
-        if not str(s0.get("glass") or "").strip():
+        if not s0.has_glass:
             break
         cur += 2
     return cur
@@ -513,14 +460,14 @@ def _apply_standard_surface_scope_from_zmx(zmx: str, cfg, rp: dict, log=print) -
         log(f"标准模板镜头面裁剪：产品类型 {product_type!r} 无效（仅支持 TX/RX），已按全部面生成。")
         return
     try:
-        surfaces = _parse_zmx_surfaces(zmx)
+        surfaces = lens_scanner.parse_surfaces(zmx)
     except Exception as e:
         log(f"标准模板镜头面裁剪：读取 ZMX 失败，已按全部面生成。{type(e).__name__}: {e}")
         return
     if not surfaces:
         log("标准模板镜头面裁剪：未从镜头文件读取到面数据（可能为 .zos 二进制或非标准格式），已按全部面生成。")
         return
-    filters = [int(s["surface"]) for s in surfaces if _is_filter_surface(s)]
+    filters = [s.surface for s in surfaces if s.is_filter]
     if not filters:
         log("标准模板镜头面裁剪：未找到 AF32ECO/D263TECO 滤光片，已按全部面生成。")
         return
@@ -625,7 +572,10 @@ def _field_label(value: float) -> str:
 
 def _append_standard_dynamic_metrics(zos_system, cfg, rp: dict, center_wave: int,
                                      log=print):
-    if str(rp.get("分析模式") or "").strip() != "标准模板":
+    # 标准模板默认启用；高级 Excel 模式可通过运行参数「启用动态评价项=Y」开启
+    # （公差填写向导生成的配置使用该开关）。
+    standard_dynamic = str(rp.get("分析模式") or "").strip() == "标准模板"
+    if not standard_dynamic and not _yes(rp.get("启用动态评价项", "N")):
         return cfg
     if center_wave <= 0:
         log("标准模板动态评价项：中心波长号无效，已跳过中心指向偏移、焦距偏移百分比和 FOV。")
@@ -673,7 +623,7 @@ def _append_standard_dynamic_metrics(zos_system, cfg, rp: dict, center_wave: int
     template_name = str(rp.get("标准模板") or "").strip()
     pointing_angle_fields = _pointing_angle_fields(template_name)
     angle_labels = {f"POINTING_ANGLE_{_field_label(field)}_deg" for field in pointing_angle_fields}
-    if not angle_labels.issubset(_report_labels(new_cfg)):
+    if _yes(rp.get("启用指向角", "Y")) and not angle_labels.issubset(_report_labels(new_cfg)):
         image_surface = max(0, int(zos_system.LDE.NumberOfSurfaces) - 1)
         new_cfg.mfe.append(_mfe_row(line, "BLNK", comment="POINTING_ANGLE_deg")); line += 1
         appended_labels: list[str] = []
@@ -736,7 +686,7 @@ def _append_standard_dynamic_metrics(zos_system, cfg, rp: dict, center_wave: int
             added.append("EFL_DELTA_PCT")
             log(f"焦距偏移百分比：EFFL0={efl0:.12g}，已追加 EFL_DELTA_PCT。")
 
-    if "FOV_Y_deg" not in _report_labels(new_cfg):
+    if _yes(rp.get("启用FOV", "Y")) and "FOV_Y_deg" not in _report_labels(new_cfg):
         product_type = str(rp.get("产品类型") or "").strip().upper()
         if product_type == "TX":
             surface = max(0, int(zos_system.LDE.NumberOfSurfaces) - 1)
@@ -800,6 +750,30 @@ class Prepared:
     tde_meta: list | None = None
 
 
+def _check_zmx_fingerprint(zmx: str, rp: dict, log=print) -> None:
+    """比对配置中的面数指纹与当前 zmx（公差填写向导生成的配置带此字段）。
+
+    指纹不一致说明 zmx 面结构在生成配置后被改动，面号可能错位，直接报错；
+    配置无指纹字段时跳过；zmx 解析失败只告警不阻断（后续裁剪逻辑另有兜底）。
+    """
+    expected = str(rp.get("面数指纹") or "").strip()
+    if not expected:
+        return
+    try:
+        actual = lens_scanner.fingerprint(lens_scanner.parse_surfaces(zmx))
+    except Exception as e:
+        log(f"面数指纹校验：读取 ZMX 失败，跳过校验。{type(e).__name__}: {e}")
+        return
+    if actual != expected:
+        raise ValueError(
+            "运行前校验失败：\n"
+            f"- 镜头文件面结构与配置生成时不一致（面号可能已错位）。\n"
+            f"  配置指纹: {expected}\n"
+            f"  当前指纹: {actual}\n"
+            f"  请用公差填写向导重新生成配置，或确认选择了正确的 zmx。")
+    log("面数指纹校验通过：zmx 面结构与配置生成时一致。")
+
+
 def prepare_session(zmx: str, config: str, outdir: str | None = None,
                     connect: str = "extension", log=print,
                     zos_dir: str | None = None,
@@ -826,9 +800,13 @@ def prepare_session(zmx: str, config: str, outdir: str | None = None,
     log(f"日志文件: {log_path}")
     used_excel_path = os.path.join(out, "used_excel.xlsx")
 
+    _check_zmx_fingerprint(zmx, rp, log=log)
+
     standard_mode = str(rp.get("分析模式") or "").strip() == "标准模板"
     center_wave = _as_int(rp.get("中心波长号"), 0)
-    center_wave_auto = standard_mode and center_wave <= 0
+    # 标准模板或启用动态评价项（公差填写向导配置）时，波长号留空/0 自动用主波长。
+    center_wave_auto = (standard_mode or _yes(rp.get("启用动态评价项", "N"))) \
+        and center_wave <= 0
     comp_surface = _as_int(rp.get("后焦补偿面"), 0)
     comp_min = _num(rp.get("补偿Min"))
     comp_max = _num(rp.get("补偿Max"))
@@ -997,10 +975,26 @@ def prepare_session(zmx: str, config: str, outdir: str | None = None,
     comp_mf_name = None
     if comp_on:
         wave_for_mf = center_wave if center_wave > 0 else (lens_info.primary_wave or 2)
+        # 补偿Min/Max（相对名义厚度）→ 换算后焦面厚度绝对上下限，
+        # 作为 CTGT/CTLT 软约束写进补偿 MF（与 TDE COMP 硬限位配合）。
+        thick_min = thick_max = None
+        if comp_surface > 0 and (comp_min is not None or comp_max is not None):
+            try:
+                t0 = float(sess.sys.LDE.GetSurfaceAt(int(comp_surface)).Thickness)
+                thick_min = None if comp_min is None else t0 + float(comp_min)
+                thick_max = None if comp_max is None else t0 + float(comp_max)
+                log(f"补偿 MF 厚度软约束：面 {comp_surface} 名义厚度 {t0:g}，"
+                    f"范围 [{'-' if thick_min is None else f'{thick_min:g}'}, "
+                    f"{'-' if thick_max is None else f'{thick_max:g}'}]（CTGT/CTLT）")
+            except Exception as e:
+                log(f"补偿 MF 厚度软约束：读取面 {comp_surface} 名义厚度失败，"
+                    f"已跳过约束。{type(e).__name__}: {e}")
+                thick_min = thick_max = None
         _n_comp, comp_mf_path = mfe_builder.build_comp_mf(
-            sess.sys, base, freq_lp=comp_freq, wave=wave_for_mf)
+            sess.sys, base, freq_lp=comp_freq, wave=wave_for_mf,
+            comp_surface=comp_surface, thick_min=thick_min, thick_max=thick_max)
         comp_mf_name = os.path.basename(comp_mf_path)
-        log(f"已生成补偿专用 MF（GMTA {comp_freq}lp/mm）→ {comp_mf_path}")
+        log(f"已生成补偿专用 MF（GMTA {comp_freq}lp/mm，共 {_n_comp} 行）→ {comp_mf_path}")
 
     mf_name = os.path.basename(mf_path)
     optimize_cycles = _as_int(rp.get("TSC优化周期"), 4)
