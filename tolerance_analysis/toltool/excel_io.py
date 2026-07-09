@@ -99,7 +99,7 @@ _RUN_EX = [
     ["输出直方图", "N", "本期预留，默认关"],
     ["启用视场映射", "N", "Y=启用后台视场映射；默认关"],
     ["视场插入策略", "禁用", "禁用/自动插入；自动插入只修改 tol 工作副本"],
-    ["视场匹配阈值", 0.05, "目标归一化视场与最近已有视场差值大于该值时视为缺失"],
+    ["视场匹配阈值", 0.001, "目标归一化视场与最近已有视场差值大于该值时视为缺失"],
     ["目标归一化视场", "0,-0.25,0.25,-0.5,0.5,-0.7,0.7,-0.9,0.9,-1,1", "标准目标视场序列；后台推断时吸附到最近目标"],
     ["目标视场来源策略", "自动推断", "自动推断=优先目标列，空则从RSCE Param4/其他操作数Param3推断；仅显式=只用目标列，不自动反推"],
 ]
@@ -320,3 +320,47 @@ def write_config_snapshot(source_path: str, target_path: str, cfg: Config) -> st
 
 def write_mapped_config(source_path: str, target_path: str, cfg: Config) -> str:
     return write_config_snapshot(source_path, target_path, cfg)
+
+
+def write_detail_config(path: str, detail_rows: list[dict],
+                        extra_run_params: dict | None = None,
+                        mfe_rows: list[dict] | None = None,
+                        report_rows: list[dict] | None = None) -> str:
+    """由公差明细行生成一份全新的高级 Excel 配置（供公差填写向导使用）。
+
+    - 基于 generate_template() 的完整模板生成，保证所有 sheet 结构齐全；
+    - `输入_公差向导` 整表清空（不启用向导，避免与明细叠加）；
+    - `输入_公差明细` 写入 detail_rows（操作数/面1/面2/Min/Max/注释）；
+    - mfe_rows/report_rows 提供时替换模板默认的评价函数与 REPORT 行；
+    - extra_run_params 追加/覆盖到 `输入_运行参数`（如源 zmx 路径、面数指纹）。
+
+    不覆盖已有文件：path 已存在时抛 FileExistsError。
+    """
+    if os.path.exists(path):
+        raise FileExistsError(f"{path} 已存在，不覆盖已有文件。")
+    generate_template(path, overwrite=False)
+    wb = load_workbook(path)
+    _rewrite_sheet(wb["输入_公差向导"], _TOL_WIZARD_HDR, [])
+    _rewrite_sheet(wb["输入_公差明细"], _TOL_DETAIL_HDR, detail_rows)
+    if mfe_rows is not None:
+        _rewrite_sheet(wb["输入_评价函数"], _MFE_HDR, mfe_rows)
+    if report_rows is not None:
+        _rewrite_sheet(wb["输入_REPORT"], _REPORT_HDR, report_rows)
+    if extra_run_params:
+        ws = wb["输入_运行参数"]
+        existing: dict[str, int] = {}
+        for r in range(2, ws.max_row + 1):
+            key = str(ws.cell(row=r, column=1).value or "").strip()
+            if key:
+                existing[key] = r
+        next_row = ws.max_row + 1
+        for key, value in extra_run_params.items():
+            if key in existing:
+                ws.cell(row=existing[key], column=2, value=value)
+            else:
+                ws.cell(row=next_row, column=1, value=key)
+                ws.cell(row=next_row, column=2, value=value)
+                ws.cell(row=next_row, column=3, value="公差填写向导生成")
+                next_row += 1
+    wb.save(path)
+    return path
