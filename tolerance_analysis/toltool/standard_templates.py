@@ -163,12 +163,12 @@ def _mtf_operands(fields: tuple[float, ...]) -> tuple[OperandSpec, ...]:
 _RX_TEMPLATES = {
     "标准分析": TemplateSpec(
         name="标准分析",
-        description="标准分析：使用 0、0.5、0.9、-0.9 目标视场；包含点列评价，并对 ±0.9 边缘视场增加 GENC/MTF 评价。",
+        description="标准分析：使用 0、0.5、0.9、-0.9 目标视场；包含全视场点列与 MTF 评价，并对 0 及 ±0.9 视场增加 GENC 评价。",
         target_fields=STANDARD_TARGET_FIELDS,
         operands=(
             *_spot_operands(STANDARD_TARGET_FIELDS),
-            *_genc_operands((0.9, -0.9)),
-            *_mtf_operands((0.9, -0.9)),
+            *_genc_operands((0, 0.9, -0.9)),
+            *_mtf_operands(STANDARD_TARGET_FIELDS),
         ),
     ),
     "完整视场分析": TemplateSpec(
@@ -185,11 +185,11 @@ _RX_TEMPLATES = {
 _TX_TEMPLATES = {
     "标准分析": TemplateSpec(
         name="标准分析",
-        description="标准分析：使用 0、0.5、0.9、-0.9 目标视场；包含点列评价，并对 ±0.9 边缘视场增加 GENC 评价。",
+        description="标准分析：使用 0、0.5、0.9、-0.9 目标视场；包含点列评价，并对 0 及 ±0.9 视场增加 GENC 评价。",
         target_fields=STANDARD_TARGET_FIELDS,
         operands=(
             *_spot_operands(STANDARD_TARGET_FIELDS),
-            *_genc_operands((0.9, -0.9)),
+            *_genc_operands((0, 0.9, -0.9)),
         ),
     ),
     "完整视场分析": TemplateSpec(
@@ -210,6 +210,54 @@ _PRODUCT_TEMPLATES = {
 
 TEMPLATE_NAMES = tuple(_RX_TEMPLATES.keys())
 LEVEL_NAMES = tuple(_LEVEL_VALUES.keys())
+
+
+def build_custom_mfe_report(field_seq: str = "标准",
+                            include_spot: bool = True,
+                            include_genc: bool = True,
+                            include_mtf: bool = True,
+                            mtf_freq: float = 34.0,
+                            center_wave: int = 0) -> tuple[list[dict], list[dict]]:
+    """按勾选组合生成 MFE+REPORT 行（供公差填写向导使用）。
+
+    口径与标准模板一致：
+    - field_seq="标准" → SPOT/MTF 全视场（0/0.5/±0.9），GENC 取 0 及 ±0.9 视场；
+    - field_seq="完整" → SPOT/GENC/MTF 全套完整视场序列；
+    - center_wave=0 时运行期自动替换为主波长。
+    """
+    if field_seq == "完整":
+        fields = FULL_TARGET_FIELDS
+        genc_fields = FULL_TARGET_FIELDS
+        mtf_fields = FULL_TARGET_FIELDS
+    else:
+        fields = STANDARD_TARGET_FIELDS
+        genc_fields = (0, 0.9, -0.9)
+        mtf_fields = STANDARD_TARGET_FIELDS
+    operands: list[OperandSpec] = []
+    if include_spot:
+        operands.extend(_spot_operands(fields))
+    if include_genc:
+        operands.extend(_genc_operands(genc_fields))
+    if include_mtf:
+        freq = float(mtf_freq) if mtf_freq else 34.0
+        for field in mtf_fields:
+            label = _field_label(field)
+            operands.append(_mtf(f"GMTFT_{label}", "GMTT", 1, freq, field))
+            operands.append(_mtf(f"GMTFS_{label}", "GMTS", 1, freq, field))
+    mfe: list[dict] = []
+    report: list[dict] = []
+    line_no = 2
+    for operand in operands:
+        _add_mfe(mfe, line_no, operand, center_wave)
+        report.append({
+            "启用": "Y",
+            "标签": operand.label,
+            "MF行号": line_no,
+            "方向": operand.direction,
+            "单位": operand.unit,
+        })
+        line_no += 1
+    return mfe, report
 
 
 def product_types() -> tuple[str, ...]:
