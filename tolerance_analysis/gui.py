@@ -73,9 +73,23 @@ def _resolve_ztd_config(ztd: str, fallback_config: str) -> tuple[str, str]:
     return fallback_config, "界面选择的 Excel"
 
 
+class _WINCOMPATTRDATA(ctypes.Structure):
+    """user32.SetWindowCompositionAttribute 的参数结构。"""
+    _fields_ = [("Attrib", ctypes.c_int),
+                ("pvData", ctypes.c_void_p),
+                ("cbData", ctypes.c_size_t)]
+
+
 def _apply_dark_titlebar(widget: QtWidgets.QWidget) -> None:
     """Windows 下把窗口标题栏改成深色（DWM 沉浸式暗色模式）。
 
+    兼容说明：
+    - DwmSetWindowAttribute(20/19)：Win10 1903+/Win11 生效；
+    - Win10 1809（Build 17763）上 attr 19 对已显示窗口经常不刷新，
+      需补 SetWindowCompositionAttribute(WCA_USEDARKMODECOLORS=26)；
+    - 颜色属性 34/35/36 仅 Win11 22000+ 支持，旧系统调用失败静默；
+    - 最后 SetWindowPos(FRAMECHANGED) 强制非客户区重绘，
+      解决属性已设置但标题栏仍按旧色绘制的问题。
     非 Windows 或调用失败时静默忽略，不影响界面其余部分。
     """
     if sys.platform != "win32":
@@ -83,17 +97,29 @@ def _apply_dark_titlebar(widget: QtWidgets.QWidget) -> None:
     try:
         hwnd = int(widget.winId())
         dwm = ctypes.windll.dwmapi
+        user32 = ctypes.windll.user32
         value = ctypes.c_int(1)
         for attr in (20, 19):
             if dwm.DwmSetWindowAttribute(
                 hwnd, attr, ctypes.byref(value), ctypes.sizeof(value)) == 0:
                 break
+        # Win10 1809 专用补丁：WCA_USEDARKMODECOLORS
+        try:
+            data = _WINCOMPATTRDATA(
+                26, ctypes.cast(ctypes.byref(value), ctypes.c_void_p),
+                ctypes.sizeof(value))
+            user32.SetWindowCompositionAttribute(hwnd, ctypes.byref(data))
+        except Exception:
+            pass
         caption = ctypes.c_int(0x001f1e1e)
         text = ctypes.c_int(0x00dedddc)
         border = ctypes.c_int(0x00363230)
         dwm.DwmSetWindowAttribute(hwnd, 35, ctypes.byref(caption), ctypes.sizeof(caption))
         dwm.DwmSetWindowAttribute(hwnd, 36, ctypes.byref(text), ctypes.sizeof(text))
         dwm.DwmSetWindowAttribute(hwnd, 34, ctypes.byref(border), ctypes.sizeof(border))
+        # 强制重绘标题栏（SWP_NOSIZE|NOMOVE|NOZORDER|NOACTIVATE|FRAMECHANGED）
+        user32.SetWindowPos(hwnd, None, 0, 0, 0, 0,
+                            0x0001 | 0x0002 | 0x0004 | 0x0010 | 0x0020)
     except Exception:
         pass
 
@@ -109,6 +135,23 @@ def _dark_message_box(parent, icon, title, text, buttons, default):
     box.show()
     _apply_dark_titlebar(box)
     return box.exec()
+
+
+class _DarkTitleBarFilter(QtCore.QObject):
+    """全局事件过滤器：任何顶层窗口创建/显示原生句柄时自动应用暗色标题栏。
+
+    解决 Qt 对话框关闭后原生 HWND 被销毁、二次 show() 生成新句柄导致
+    标题栏变回白色的问题（Win10 1809 需在显示前设置 DWM 属性）。
+    WinIdChange 在句柄创建瞬间触发（早于显示），Show 作为兜底。
+    """
+
+    _EVENTS = (QtCore.QEvent.WinIdChange, QtCore.QEvent.Show)
+
+    def eventFilter(self, obj, event):
+        if event.type() in self._EVENTS and isinstance(obj, QtWidgets.QWidget) \
+                and obj.isWindow():
+            _apply_dark_titlebar(obj)
+        return False
 
 
 def _apply_dark_palette(app: QtWidgets.QApplication) -> None:
@@ -537,6 +580,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._ztd_args = None
         self._field_preview_args = None
         self._active_task = ""
+        self._cancel_requested = False
         self._settings = QtCore.QSettings(SETTINGS_ORG, SETTINGS_APP)
 
         central = QtWidgets.QWidget()
@@ -648,8 +692,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sp_runs.setRange(1, 100000)
         self.sp_runs.setValue(int(self._setting("standard_runs", "20")))
         self.sp_save = QtWidgets.QSpinBox()
-        self.sp_save.setRange(0, 100000)
-        self.sp_save.setValue(int(self._setting("standard_save", "0")))
+        self.sp_save.setRange(0, self.sp_runs.value())
+        self.sp_save.setValue(min(int(self._setting("standard_save", "0")),
+                                  self.sp_runs.value()))
+        self.sp_runs.valueChanged.connect(self.sp_save.setMaximum)
         self.cb_comp = QtWidgets.QComboBox()
         self.cb_comp.addItems(["无", "全部优化DLS", "全部优化OD"])
         idx = self.cb_comp.findText(self._setting("standard_comp", "无"))
@@ -710,6 +756,10 @@ class MainWindow(QtWidgets.QMainWindow):
         btns.setSpacing(8)
         self.btn_export_std = QtWidgets.QPushButton("导出标准配置")
         self.btn_export_std.clicked.connect(self._on_export_standard_config)
+        self.btn_tol_wizard = QtWidgets.QPushButton("公差填写向导…")
+        self.btn_tol_wizard.setToolTip(
+            "扫描 zmx 逐镜片填写公差，生成新的高级 Excel 配置（不修改现有文件）。")
+        self.btn_tol_wizard.clicked.connect(self._on_open_tol_wizard)
         self.btn_check_config = QtWidgets.QPushButton("检查配置")
         self.btn_check_config.clicked.connect(self._on_check_config)
         self.btn_preview_fields = QtWidgets.QPushButton("预览视场映射")
@@ -719,6 +769,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.check_dialog.setWindowTitle("配置与视场检查")
         self.check_dialog.setModal(False)
         self.check_dialog.resize(420, 170)
+        # 创建后立即应用暗色标题栏（winId() 强制生成原生句柄），
+        # 避免首次 show() 时按亮色绘制。
+        _apply_dark_titlebar(self.check_dialog)
         check_dialog_layout = QtWidgets.QVBoxLayout(self.check_dialog)
         check_dialog_layout.setContentsMargins(14, 14, 14, 14)
         check_dialog_layout.setSpacing(10)
@@ -737,6 +790,7 @@ class MainWindow(QtWidgets.QMainWindow):
         check_dialog_layout.addLayout(check_mode_row)
         check_actions = QtWidgets.QHBoxLayout()
         check_actions.addWidget(self.btn_export_std)
+        check_actions.addWidget(self.btn_tol_wizard)
         check_actions.addWidget(self.btn_check_config)
         check_actions.addWidget(self.btn_preview_fields)
         check_actions.addStretch(1)
@@ -918,6 +972,11 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.cb_analysis_mode.currentData() == "current":
             return
         self._on_analysis_mode_changed()
+        # 关键：先销毁旧的原生窗口句柄，让本次 show() 重建全新 HWND。
+        # 这样与 exec() 型弹窗一致——始终“新句柄 + 首次设置暗色”，
+        # 规避 Win10 1809 对复用窗口重复 show() 时标题栏不刷新的 bug。
+        self.check_dialog.hide()
+        self.check_dialog.destroy()
         self.check_dialog.show()
         self.check_dialog.raise_()
         self.check_dialog.activateWindow()
@@ -956,6 +1015,9 @@ class MainWindow(QtWidgets.QMainWindow):
         if hasattr(self, "btn_check_config"):
             self.btn_check_config.setVisible(use_excel)
             self.btn_check_config.setEnabled(use_excel)
+        if hasattr(self, "btn_tol_wizard"):
+            self.btn_tol_wizard.setVisible(use_excel)
+            self.btn_tol_wizard.setEnabled(use_excel)
         if hasattr(self, "btn_preview_fields"):
             self.btn_preview_fields.setVisible(not use_current)
             self.btn_preview_fields.setEnabled(not use_current)
@@ -1002,6 +1064,19 @@ class MainWindow(QtWidgets.QMainWindow):
         if path:
             self.ed_config.setText(path)
             self._remember_path("config", path)
+
+    def _on_open_tol_wizard(self):
+        zmx = self.ed_zmx.text().strip()
+        if not os.path.isfile(zmx):
+            self._warn("请先选择有效的 zmx 文件。")
+            return
+        from gui_tol_wizard import TolWizardDialog
+        outdir = self.ed_outdir.text().strip()
+        dlg = TolWizardDialog(zmx, parent=self, outdir=outdir or None)
+        if dlg.exec() == QtWidgets.QDialog.Accepted and dlg.result_path:
+            self.ed_config.setText(dlg.result_path)
+            self._remember_path("config", dlg.result_path)
+            self._append_log(f"公差填写向导已生成配置: {dlg.result_path}")
 
     def _pick_outdir(self):
         path = QtWidgets.QFileDialog.getExistingDirectory(
@@ -1195,6 +1270,18 @@ class MainWindow(QtWidgets.QMainWindow):
         if not (use_standard or use_current) and not os.path.isfile(config):
             self._warn("Excel 配置不存在：\n" + config)
             return
+        if not (use_standard or use_current):
+            ret = _dark_message_box(
+                self, QtWidgets.QMessageBox.Question, "开始分析（高级 Excel 模式）",
+                "请确认 Excel 配置已维护完成：\n\n"
+                f"{config}\n\n"
+                "如尚未维护公差/评价函数，可先取消，使用「配置检查…」中的\n"
+                "「公差填写向导…」生成配置。\n\n"
+                "确定开始分析？",
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+                QtWidgets.QMessageBox.No)
+            if ret != QtWidgets.QMessageBox.Yes:
+                return
         if not outdir:
             outdir = os.path.join(_app_dir(), "output")
         os.makedirs(outdir, exist_ok=True)
@@ -1349,10 +1436,22 @@ class MainWindow(QtWidgets.QMainWindow):
             f"运行总数 {num_runs} 次 / 保存总数 {num_to_save} 个")
 
     def _on_cancel(self):
-        if self._worker is not None:
+        if self._worker is None:
+            return
+        if not self._cancel_requested:
+            # 第一段：温和取消，等待当前蒙特卡洛步完成
+            self._cancel_requested = True
             self._worker.cancel()
-            self.btn_cancel.setEnabled(False)
-            self._append_log("正在请求取消…（等待当前蒙特卡洛步完成）")
+            self.btn_cancel.setText("强制停止")
+            self.btn_cancel.setToolTip(
+                "已请求取消，等待当前蒙特卡洛步完成；再次点击立即关闭后台 Zemax（结果丢失）。")
+            self._append_log("正在请求取消…（等待当前蒙特卡洛步完成；再点一次可强制停止）")
+            return
+        # 第二段：强制停止，立即关闭后台 Zemax 实例
+        if hasattr(self._worker, "force_stop"):
+            self._worker.force_stop()
+        self.btn_cancel.setEnabled(False)
+        self._append_log("已强制停止：正在关闭后台 Zemax 实例…")
 
     def _on_copy_log(self):
         text = self.log_view.toPlainText()
@@ -1453,7 +1552,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self._thread.wait(5000)
             self._thread = None
         self._worker = None
-        self._set_running(False)
+        # 注意：选目录期间保持表单锁定（不调 _set_running(False)），
+        # 避免用户此时修改 zmx/参数后，重启 worker 仍用捕获的旧参数导致不一致；
+        # 仅在用户取消或连续失败放弃时才解锁。
         self._append_log("⚠ 未自动找到 Zemax 安装目录，请手动指定。")
 
         tip = "未能自动找到 Zemax（ZOS-API）安装目录。"
@@ -1470,6 +1571,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 QtWidgets.QMessageBox.Ok)
             if ret != QtWidgets.QMessageBox.Ok:
                 self._active_task = ""
+                self._set_running(False)
                 self._append_log("已取消指定 Zemax 目录。")
                 self.statusBar().showMessage("已取消")
                 return
@@ -1497,6 +1599,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 self._start_worker(d)
             return
 
+        self._active_task = ""
+        self._set_running(False)
         self._append_log(f"已连续 {max_attempts} 次未选定有效目录，已停止。")
         self.statusBar().showMessage("已取消")
 
@@ -1504,9 +1608,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_run.setEnabled(not running)
         self.btn_ztd.setEnabled(not running)
         self.btn_cancel.setEnabled(running and self._active_task == "tol")
+        # 每次启停都复位两段式取消按钮状态
+        self._cancel_requested = False
+        self.btn_cancel.setText("取消")
+        self.btn_cancel.setToolTip("")
         # 运行态统一禁用这些按钮；非运行态的显隐与 enable 交给 _on_analysis_mode_changed 复原。
         for btn in (self.btn_show_check, self.btn_export_std, self.btn_check_config,
-                    self.btn_preview_fields, self.btn_open_result_log):
+                    self.btn_preview_fields, self.btn_tol_wizard,
+                    self.btn_open_result_log):
             btn.setEnabled(not running)
         for w in (self.ed_zmx, self.ed_config, self.ed_outdir,
                   self.ed_ztd, self.cb_mode, self.cb_analysis_mode,
@@ -1569,6 +1678,10 @@ class MainWindow(QtWidgets.QMainWindow):
 def main() -> int:
     app = QtWidgets.QApplication(sys.argv)
     _apply_dark_palette(app)
+    # 全局暗色标题栏：所有顶层窗口（对话框/弹窗/向导）创建句柄时自动应用，
+    # 需保持引用防止被垃圾回收。
+    dark_filter = _DarkTitleBarFilter(app)
+    app.installEventFilter(dark_filter)
     win = MainWindow()
     _apply_dark_titlebar(win)
     win.show()
