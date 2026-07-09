@@ -1,143 +1,476 @@
-"""mfe_builder.py —— 由 Excel 评价函数配置重建 MFE 并保存 .MF。
+"""standard_templates.py —— 普通标准模板模式的内置配置生成。
 
-职责（需求文档 §4.5/§7）：
-- 按「输入_评价函数」各行重建评价函数编辑器（MFE）。
-- SaveMeritFunction() 存成 .MF，供 TSC 的 LOADMERIT 使用。
-
-实测 API（probe 验证）：
-- mfe.AddOperand() -> IMFERow；mfe.RemoveOperandAt(i)
-- row.ChangeType(MeritOperandType.XXX) -> bool
-- 参数列通过 row.GetOperandCell(MeritColumn.ParamN) 访问；
-  Param1/2/3 为整数列、Param4 等为浮点列；用 cell.Value(字符串) 通用赋值。
-- row.Target / row.Weight 直接属性。
-- 各操作数 Param 语义不同（用户在 Excel 直接填 Param1..Param8）：
-  RSCE: P1采样 P2波长 P4视场系数
-  GENC: P1采样 P2波长 P3视场号 P4能量比 P5...
-  GMTT/GMTS: P1采样 P2波长 P3视场号 P4空间频率
+模板内容集中在本文件顶部的数据区，后续正式标准确定后优先改
+_LEVEL_VALUES / _TEMPLATES，不需要改 Excel 写出与主流程接入逻辑。
 """
 
 from __future__ import annotations
 
 import os
+import re
+import uuid
+from dataclasses import dataclass
 
-_PARAM_COLS = ["Param1", "Param2", "Param3", "Param4",
-               "Param5", "Param6", "Param7", "Param8"]
+from openpyxl import load_workbook
 
-
-def _to_cell_str(v) -> str | None:
-    if v is None or (isinstance(v, str) and v.strip() == ""):
-        return None
-    if isinstance(v, float) and v.is_integer():
-        return str(int(v))
-    return str(v)
+from . import excel_io
 
 
-def build_mfe(zos_system, mfe_rows: list[dict], clear: bool = True) -> int:
-    """按 Excel 行重建 MFE。返回写入的操作数行数。"""
-    import ZOSAPI
+@dataclass(frozen=True)
+class OperandSpec:
+    label: str
+    op: str
+    params: dict
+    direction: str
+    unit: str
+    target: float = 0
+    weight: float = 1
 
-    mfe = zos_system.MFE
-    MOT = ZOSAPI.Editors.MFE.MeritOperandType
-    MC = ZOSAPI.Editors.MFE.MeritColumn
 
-    rows_sorted = sorted(
-        mfe_rows,
-        key=lambda r: float(r.get("行号")) if r.get("行号") not in (None, "") else 1e9,
+@dataclass(frozen=True)
+class TemplateSpec:
+    name: str
+    description: str
+    target_fields: tuple[float, ...]
+    operands: tuple[OperandSpec, ...]
+
+
+_LEVEL_VALUES = {
+    "宽松": {
+        "半径": 3,
+        "厚度": 0.05,
+        "面倾斜": 0.05,
+        "元件偏心": 0.05,
+        "元件倾斜": 0.3,
+        "面不规则": 1,
+        "折射率": 0.0005,
+        "阿贝%": 1,
+    },
+    "标准": {
+        "半径": 3,
+        "厚度": 0.03,
+        "面倾斜": 0.05,
+        "元件偏心": 0.03,
+        "元件倾斜": 0.2,
+        "面不规则": 1,
+        "折射率": 0.0005,
+        "阿贝%": 1,
+    },
+    "严格": {
+        "半径": 3,
+        "厚度": 0.02,
+        "面倾斜": 0.025,
+        "元件偏心": 0.02,
+        "元件倾斜": 0.1,
+        "面不规则": 1,
+        "折射率": 0.0005,
+        "阿贝%": 1,
+    },
+}
+
+
+def _spot(label: str, field: float) -> OperandSpec:
+    return OperandSpec(
+        label=label,
+        op="RSCE",
+        params={
+            "Param1": 3,
+            "Param2": "{center_wave}",
+            "Param3": 0,
+            "Param4": field,
+            "目标归一化视场": field,
+        },
+        direction="小",
+        unit="mm",
     )
 
-    if clear:
-        while mfe.NumberOfOperands > 1:
-            mfe.RemoveOperandAt(mfe.NumberOfOperands)
-        first = mfe.GetOperandAt(1)
-        first.ChangeType(MOT.BLNK)
 
-    written = 0
-    for row in rows_sorted:
-        op = str(row.get("操作数", "")).strip().upper()
-        if not op:
-            continue
-        op_enum = getattr(MOT, op, None)
-        if op_enum is None:
-            raise ValueError(f"MFE 不支持的操作数: {op}")
-        r = mfe.AddOperand()
-        if not r.ChangeType(op_enum):
-            raise RuntimeError(f"MFE ChangeType 失败: {op}")
-        for nm in _PARAM_COLS:
-            sval = _to_cell_str(row.get(nm))
-            if sval is None:
-                continue
-            cell = r.GetOperandCell(getattr(MC, nm))
-            cell.Value = sval
-        if row.get("目标") not in (None, ""):
-            r.Target = float(row.get("目标"))
-        if row.get("权重") not in (None, ""):
-            r.Weight = float(row.get("权重"))
-        written += 1
-    return written
+def _genc(label: str, field_no: int, target_field: float) -> OperandSpec:
+    return OperandSpec(
+        label=label,
+        op="GENC",
+        params={
+            "Param1": 3,
+            "Param2": "{center_wave}",
+            "Param3": field_no,
+            "Param4": 0.95,
+            "Param5": 1,
+            "Param6": 0,
+            "Param7": 0,
+            "目标归一化视场": target_field,
+        },
+        direction="小",
+        unit="um",
+    )
 
 
-def save_mf(zos_system, mf_path: str) -> str:
-    """保存当前 MFE 到 .MF 文件。返回路径。"""
-    zos_system.MFE.SaveMeritFunction(mf_path)
-    return mf_path
+def _mtf(label: str, op: str, field_no: int, freq: float,
+         target_field: float) -> OperandSpec:
+    return OperandSpec(
+        label=label,
+        op=op,
+        params={
+            "Param1": 3,
+            "Param2": "{center_wave}",
+            "Param3": field_no,
+            "Param4": freq,
+            "Param5": 0,
+            "Param6": 0,
+            "目标归一化视场": target_field,
+        },
+        direction="大",
+        unit="-",
+    )
 
 
-def default_mf_path(zos_system, base_name: str) -> str:
-    """返回 <DataDir>\\MeritFunction\\<base_name>.MF 路径。"""
-    mf_dir = str(zos_system.MFE.MeritFunctionDirectory or "").strip()
-    if not mf_dir:
-        raise RuntimeError(
-            "无法从 Zemax 读取 MeritFunctionDirectory（返回空），"
-            "无法定位 .MF 保存目录。请确认已连接 Zemax 并打开镜头。")
-    if not base_name.lower().endswith(".mf"):
-        base_name += ".MF"
-    return os.path.join(mf_dir, base_name)
+STANDARD_TARGET_FIELDS = (0, 0.5, 0.9, -0.9)
+FULL_TARGET_FIELDS = (0, -0.25, 0.25, -0.5, 0.5, -0.7, 0.7, -0.9, 0.9, -1, 1)
+PRODUCT_TYPES = ("RX", "TX")
+PRODUCT_DESCRIPTIONS = {
+    "RX": "RX：接收端标准模板。",
+    "TX": "TX：发射端标准模板，评价函数不包含 MTF 项。",
+}
+DEFAULT_PRODUCT_TYPE = "RX"
+DEFAULT_TEMPLATE_NAME = "标准分析"
 
 
-def build_and_save(zos_system, mfe_rows: list[dict], base_name: str) -> tuple[int, str]:
-    """重建 MFE 并保存 .MF。返回 (行数, .MF 路径)。"""
-    n = build_mfe(zos_system, mfe_rows)
-    path = default_mf_path(zos_system, base_name)
-    save_mf(zos_system, path)
-    return n, path
+def _field_label(value: float) -> str:
+    if abs(float(value)) < 1e-12:
+        return "F0"
+    return f"F{float(value):g}"
 
 
-def build_comp_mf(zos_system, base_name: str, freq_lp: float = 34.0,
-                  sampling: int = 3, wave: int = 2) -> tuple[int, str]:
-    """构建后焦补偿专用评价函数并保存 .MF（不沿用报告 MF）。
+def _spot_operands(fields: tuple[float, ...]) -> tuple[OperandSpec, ...]:
+    return tuple(_spot(f"SPOT_{_field_label(field)}", field) for field in fields)
 
-    内容：单条 GMTA（几何 MTF 平均），视场=1（中心视场），
-    目标=1，权重=1，空间频率=freq_lp（补偿线对，默认 34 lp/mm）。
-    GMTA 参数语义：P1采样 P2波长 P3视场号 P4空间频率。
-    base_name 自动加后缀 _comp。返回 (行数, .MF 路径)。
+
+def _genc_operands(fields: tuple[float, ...]) -> tuple[OperandSpec, ...]:
+    return tuple(
+        _genc(f"GENC95_{_field_label(field)}", 1, field)
+        for field in fields
+    )
+
+
+def _mtf_operands(fields: tuple[float, ...]) -> tuple[OperandSpec, ...]:
+    rows: list[OperandSpec] = []
+    for field in fields:
+        label = _field_label(field)
+        rows.append(_mtf(f"GMTFT_{label}", "GMTT", 1, 34, field))
+        rows.append(_mtf(f"GMTFS_{label}", "GMTS", 1, 34, field))
+    return tuple(rows)
+
+
+_RX_TEMPLATES = {
+    "标准分析": TemplateSpec(
+        name="标准分析",
+        description="标准分析：使用 0、0.5、0.9、-0.9 目标视场；包含全视场点列与 MTF 评价，并对 0 及 ±0.9 视场增加 GENC 评价。",
+        target_fields=STANDARD_TARGET_FIELDS,
+        operands=(
+            *_spot_operands(STANDARD_TARGET_FIELDS),
+            *_genc_operands((0, 0.9, -0.9)),
+            *_mtf_operands(STANDARD_TARGET_FIELDS),
+        ),
+    ),
+    "完整视场分析": TemplateSpec(
+        name="完整视场分析",
+        description="完整视场分析：使用 0、±0.25、±0.5、±0.7、±0.9、±1 全视场序列；包含全视场 SPOT、GENC、GMTT、GMTS 评价。",
+        target_fields=FULL_TARGET_FIELDS,
+        operands=(
+            *_spot_operands(FULL_TARGET_FIELDS),
+            *_genc_operands(FULL_TARGET_FIELDS),
+            *_mtf_operands(FULL_TARGET_FIELDS),
+        ),
+    ),
+}
+_TX_TEMPLATES = {
+    "标准分析": TemplateSpec(
+        name="标准分析",
+        description="标准分析：使用 0、0.5、0.9、-0.9 目标视场；包含点列评价，并对 0 及 ±0.9 视场增加 GENC 评价。",
+        target_fields=STANDARD_TARGET_FIELDS,
+        operands=(
+            *_spot_operands(STANDARD_TARGET_FIELDS),
+            *_genc_operands((0, 0.9, -0.9)),
+        ),
+    ),
+    "完整视场分析": TemplateSpec(
+        name="完整视场分析",
+        description="完整视场分析：使用 0、±0.25、±0.5、±0.7、±0.9、±1 全视场序列；包含全视场 SPOT、GENC 评价。",
+        target_fields=FULL_TARGET_FIELDS,
+        operands=(
+            *_spot_operands(FULL_TARGET_FIELDS),
+            *_genc_operands(FULL_TARGET_FIELDS),
+        ),
+    ),
+}
+_PRODUCT_TEMPLATES = {
+    "RX": _RX_TEMPLATES,
+    "TX": _TX_TEMPLATES,
+}
+
+
+TEMPLATE_NAMES = tuple(_RX_TEMPLATES.keys())
+LEVEL_NAMES = tuple(_LEVEL_VALUES.keys())
+
+
+def build_custom_mfe_report(field_seq: str = "标准",
+                            include_spot: bool = True,
+                            include_genc: bool = True,
+                            include_mtf: bool = True,
+                            mtf_freq: float = 34.0,
+                            center_wave: int = 0) -> tuple[list[dict], list[dict]]:
+    """按勾选组合生成 MFE+REPORT 行（供公差填写向导使用）。
+
+    口径与标准模板一致：
+    - field_seq="标准" → SPOT/MTF 全视场（0/0.5/±0.9），GENC 取 0 及 ±0.9 视场；
+    - field_seq="完整" → SPOT/GENC/MTF 全套完整视场序列；
+    - center_wave=0 时运行期自动替换为主波长。
     """
-    import ZOSAPI
+    if field_seq == "完整":
+        fields = FULL_TARGET_FIELDS
+        genc_fields = FULL_TARGET_FIELDS
+        mtf_fields = FULL_TARGET_FIELDS
+    else:
+        fields = STANDARD_TARGET_FIELDS
+        genc_fields = (0, 0.9, -0.9)
+        mtf_fields = STANDARD_TARGET_FIELDS
+    operands: list[OperandSpec] = []
+    if include_spot:
+        operands.extend(_spot_operands(fields))
+    if include_genc:
+        operands.extend(_genc_operands(genc_fields))
+    if include_mtf:
+        freq = float(mtf_freq) if mtf_freq else 34.0
+        for field in mtf_fields:
+            label = _field_label(field)
+            operands.append(_mtf(f"GMTFT_{label}", "GMTT", 1, freq, field))
+            operands.append(_mtf(f"GMTFS_{label}", "GMTS", 1, freq, field))
+    mfe: list[dict] = []
+    report: list[dict] = []
+    line_no = 2
+    for operand in operands:
+        _add_mfe(mfe, line_no, operand, center_wave)
+        report.append({
+            "启用": "Y",
+            "标签": operand.label,
+            "MF行号": line_no,
+            "方向": operand.direction,
+            "单位": operand.unit,
+        })
+        line_no += 1
+    return mfe, report
 
-    mfe = zos_system.MFE
-    MOT = ZOSAPI.Editors.MFE.MeritOperandType
-    MC = ZOSAPI.Editors.MFE.MeritColumn
 
-    while mfe.NumberOfOperands > 1:
-        mfe.RemoveOperandAt(mfe.NumberOfOperands)
-    first = mfe.GetOperandAt(1)
-    first.ChangeType(MOT.BLNK)
+def product_types() -> tuple[str, ...]:
+    return PRODUCT_TYPES
 
-    r = mfe.AddOperand()
-    if not r.ChangeType(MOT.GMTA):
-        raise RuntimeError("MFE ChangeType 失败: GMTA")
-    params = {"Param1": sampling, "Param2": wave, "Param3": 1, "Param4": freq_lp}
-    for nm, val in params.items():
-        sval = _to_cell_str(val)
-        if sval is None:
-            continue
-        r.GetOperandCell(getattr(MC, nm)).Value = sval
-    r.Target = 1.0
-    r.Weight = 1.0
 
-    comp_base = base_name
-    if comp_base.lower().endswith(".mf"):
-        comp_base = comp_base[:-3]
-    comp_base += "_comp"
-    path = default_mf_path(zos_system, comp_base)
-    save_mf(zos_system, path)
-    return 1, path
+def product_description(product_type: str = DEFAULT_PRODUCT_TYPE) -> str:
+    product_type = _normalize_product_type(product_type)
+    return PRODUCT_DESCRIPTIONS[product_type]
+
+
+def template_names(product_type: str = DEFAULT_PRODUCT_TYPE) -> tuple[str, ...]:
+    return tuple(_templates_for_product(product_type).keys())
+
+
+def template_description(template: str, product_type: str = DEFAULT_PRODUCT_TYPE) -> str:
+    return _template_spec(template, product_type).description
+
+
+def _normalize_product_type(product_type: str | None) -> str:
+    text = str(product_type or DEFAULT_PRODUCT_TYPE).strip().upper()
+    if text not in PRODUCT_TYPES:
+        raise ValueError(f"产品类型仅支持：{', '.join(PRODUCT_TYPES)}")
+    return text
+
+
+def _templates_for_product(product_type: str | None) -> dict[str, TemplateSpec]:
+    return _PRODUCT_TEMPLATES[_normalize_product_type(product_type)]
+
+
+def _template_spec(template: str, product_type: str | None = DEFAULT_PRODUCT_TYPE) -> TemplateSpec:
+    templates = _templates_for_product(product_type)
+    spec = templates.get(template)
+    if spec is None:
+        raise ValueError(f"标准模板仅支持：{', '.join(templates.keys())}")
+    return spec
+
+
+def _tol_wizard_rows(level: str, start_surface: int, end_surface: int) -> list[dict]:
+    vals = _LEVEL_VALUES[level]
+    rows = [
+        ("半径", vals["半径"], "光圈"),
+        ("厚度", vals["厚度"], "mm"),
+        ("面倾斜X", vals["面倾斜"], "度"),
+        ("面倾斜Y", vals["面倾斜"], "度"),
+        ("元件偏心X", vals["元件偏心"], "mm"),
+        ("元件偏心Y", vals["元件偏心"], "mm"),
+        ("元件倾斜X", vals["元件倾斜"], "度"),
+        ("元件倾斜Y", vals["元件倾斜"], "度"),
+        ("面不规则", vals["面不规则"], "光圈"),
+        ("折射率", vals["折射率"], "-"),
+        ("阿贝%", vals["阿贝%"], "%"),
+    ]
+    return [
+        {
+            "启用": "Y",
+            "公差类别": cat,
+            "数值": value,
+            "单位": unit,
+            "起始面": start_surface,
+            "结束面": end_surface,
+            "跳过面": "",
+        }
+        for cat, value, unit in rows
+    ]
+
+
+def _resolve_params(params: dict, center_wave: int) -> dict:
+    return {
+        key: center_wave if value == "{center_wave}" else value
+        for key, value in params.items()
+    }
+
+
+def _add_mfe(rows: list[dict], line_no: int, spec: OperandSpec,
+             center_wave: int) -> None:
+    params = _resolve_params(spec.params, center_wave)
+    row = {
+        "行号": line_no,
+        "操作数": spec.op,
+        "目标": spec.target,
+        "权重": spec.weight,
+        "注释": spec.label,
+    }
+    for i in range(1, 9):
+        row[f"Param{i}"] = params.get(f"Param{i}", "")
+    row["目标归一化视场"] = params.get("目标归一化视场", "")
+    row["视场映射说明"] = "标准模板生成"
+    row["归一化视场"] = row["目标归一化视场"]
+    rows.append(row)
+
+
+def _format_target_fields(fields: tuple[float, ...]) -> str:
+    return ",".join(f"{float(field):g}" for field in fields)
+
+
+def _mfe_and_report(template: str, center_wave: int,
+                    product_type: str = DEFAULT_PRODUCT_TYPE) -> tuple[list[dict], list[dict]]:
+    spec = _template_spec(template, product_type)
+
+    mfe: list[dict] = []
+    report: list[dict] = []
+    line_no = 2
+    for operand in spec.operands:
+        _add_mfe(mfe, line_no, operand, center_wave)
+        report.append({
+            "启用": "Y",
+            "标签": operand.label,
+            "MF行号": line_no,
+            "方向": operand.direction,
+            "单位": operand.unit,
+        })
+        line_no += 1
+    return mfe, report
+
+
+def build_config(zmx_path: str, template: str = DEFAULT_TEMPLATE_NAME, level: str = "标准",
+                 num_runs: int = 20, num_to_save: int = 0,
+                 center_wave: int = 0, comp_mode: str = "无",
+                 save_worst_best: bool = False,
+                 product_type: str = DEFAULT_PRODUCT_TYPE,
+                 all_surfaces: bool = True) -> excel_io.Config:
+    product_type = _normalize_product_type(product_type)
+    template = template.strip() or DEFAULT_TEMPLATE_NAME
+    level = level.strip() or "标准"
+    spec = _template_spec(template, product_type)
+    if level not in LEVEL_NAMES:
+        raise ValueError(f"公差等级仅支持：{', '.join(LEVEL_NAMES)}")
+
+    start_surface = 1
+    end_surface = 0
+    mfe, report = _mfe_and_report(template, center_wave, product_type)
+    return excel_io.Config(
+        tol_wizard=_tol_wizard_rows(level, start_surface, end_surface),
+        tol_detail=[],
+        mfe=mfe,
+        report=report,
+        run_params={
+            "分析模式": "标准模板",
+            "产品类型": product_type,
+            "全部面公差分析": "Y" if all_surfaces else "N",
+            "标准模板": template,
+            "公差等级": level,
+            "蒙特卡洛次数": int(num_runs),
+            "保存数量": int(num_to_save),
+            "统计分布": "正态",
+            "补偿器模式": "无" if product_type == "TX" else comp_mode,
+            "TSC优化周期": 4,
+            "中心波长号": int(center_wave),
+            "后焦补偿面": "",
+            "补偿Min": "",
+            "补偿Max": "",
+            "补偿线对": 17,
+            "保存TSC": "Y",
+            "保存WorstCase": "Y" if save_worst_best else "N",
+            "保存BestCase": "Y" if save_worst_best else "N",
+            "输出统计Excel": "Y",
+            "输出直方图": "N",
+            "启用中心指向偏移": "Y",
+            "中心指向视场号": 1,
+            "启用焦距偏移百分比": "Y",
+            "启用视场映射": "Y",
+            "视场插入策略": "自动插入",
+            "视场匹配阈值": 0.001,
+            "目标归一化视场": _format_target_fields(spec.target_fields),
+            "目标视场来源策略": "自动推断",
+        },
+    )
+
+
+def _rewrite_sheet(ws, header: list[str], rows: list[dict]) -> None:
+    ws.delete_rows(2, ws.max_row)
+    for r, row in enumerate(rows, start=2):
+        for c, key in enumerate(header, start=1):
+            ws.cell(row=r, column=c, value=row.get(key))
+
+
+def write_config_excel(path: str, cfg: excel_io.Config, overwrite: bool = True) -> str:
+    if os.path.exists(path) and not overwrite:
+        raise FileExistsError(path)
+    excel_io.generate_template(path, overwrite=True)
+    wb = load_workbook(path)
+    _rewrite_sheet(wb["输入_公差向导"], excel_io._TOL_WIZARD_HDR, cfg.tol_wizard)
+    _rewrite_sheet(wb["输入_公差明细"], excel_io._TOL_DETAIL_HDR, cfg.tol_detail)
+    _rewrite_sheet(wb["输入_评价函数"], excel_io._MFE_HDR, cfg.mfe)
+    _rewrite_sheet(wb["输入_REPORT"], excel_io._REPORT_HDR, cfg.report)
+    run_rows = [{"参数键": k, "值": v, "备注": "标准模板生成"} for k, v in cfg.run_params.items()]
+    _rewrite_sheet(wb["输入_运行参数"], excel_io._RUN_HDR, run_rows)
+    wb.save(path)
+    return path
+
+
+def default_config_path(zmx_path: str, outdir: str | None = None) -> str:
+    parent = os.path.abspath(outdir) if outdir else os.path.dirname(os.path.abspath(zmx_path))
+    base = os.path.splitext(os.path.basename(zmx_path))[0]
+    safe = re.sub(r'[^0-9A-Za-z_\-\u4e00-\u9fff]+', "_", base).strip("._") or "lens"
+    return os.path.join(parent, f"{safe}_标准模板配置.xlsx")
+
+
+def make_temp_config(zmx_path: str, outdir: str | None, template: str, level: str,
+                     num_runs: int, num_to_save: int, center_wave: int,
+                     comp_mode: str, save_worst_best: bool = False,
+                     product_type: str = DEFAULT_PRODUCT_TYPE,
+                     all_surfaces: bool = True) -> str:
+    parent = os.path.abspath(outdir) if outdir else os.path.dirname(os.path.abspath(zmx_path))
+    os.makedirs(parent, exist_ok=True)
+    base = os.path.splitext(os.path.basename(zmx_path))[0]
+    safe = re.sub(r'[^0-9A-Za-z_\-\u4e00-\u9fff]+', "_", base).strip("._") or "lens"
+    path = os.path.join(parent, f"{safe}_标准模板配置_{uuid.uuid4().hex[:8]}.xlsx")
+    cfg = build_config(zmx_path, template=template, level=level,
+                       num_runs=num_runs, num_to_save=num_to_save,
+                       center_wave=center_wave, comp_mode=comp_mode,
+                       save_worst_best=save_worst_best,
+                       product_type=product_type,
+                       all_surfaces=all_surfaces)
+    return write_config_excel(path, cfg, overwrite=False)
