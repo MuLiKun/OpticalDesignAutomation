@@ -97,6 +97,15 @@ class ScanResult:
     def succeeded(self) -> bool:
         return bool(self.surfaces)
 
+    @property
+    def surf_type_map(self) -> dict[int, str]:
+        """面号 → TYPE（大写，如 STANDARD/EVENASPH/COORDBRK）。
+
+        供公差生成按面型分发操作数：TSDX/TSDY/TSTX/TSTY 仅支持
+        Standard/Irregular 面，其余面型需改用单面元件操作数。
+        """
+        return {s.surface: s.surf_type.strip().upper() for s in self.surfaces}
+
 
 def read_zmx_text(path: str) -> str:
     """按常见编码依次尝试解码 zmx 文本。"""
