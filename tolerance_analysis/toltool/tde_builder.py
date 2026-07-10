@@ -37,6 +37,12 @@ from dataclasses import dataclass
 # 明细表用：操作数 → 是否成对面
 PAIRED_OPS = {"TTHI", "TEDX", "TEDY", "TETX", "TETY"}
 
+# 面级偏心/倾斜 → 非 Standard/Irregular 面时的单面元件替代操作数
+# （手册 p.1741/p.1819：TSDX/TSDY/TSTX/TSTY 仅支持 Standard/Irregular 面；
+#  Zemax 官方向导对非球面即用 TEDX/TEDY/TETX/TETY，Int1=Int2=该面）
+_SURFACE_TO_ELEMENT_OPS = {"TSDX": "TEDX", "TSDY": "TEDY",
+                           "TSTX": "TETX", "TSTY": "TETY"}
+
 
 @dataclass
 class TolItem:
@@ -279,6 +285,90 @@ def run_native_wizard(zos_system, wizard_rows: list[dict],
 # 公差明细 sheet → 在已生成的 TDE 上覆盖/追加/删除
 # ---------------------------------------------------------------------------
 
+def _surface_type_name(lde, surf_num: int) -> str:
+    """读取 LDE 某面的面型名（如 Standard / EvenAspheric）。失败返回空串。"""
+    try:
+        surf = lde.GetSurfaceAt(int(surf_num))
+    except Exception:
+        return ""
+    try:
+        return str(surf.TypeName)
+    except Exception:
+        try:
+            return str(surf.Type)
+        except Exception:
+            return ""
+
+
+def _is_standard_or_irregular(type_name: str) -> bool:
+    t = str(type_name).strip().upper().replace(" ", "")
+    return t == "STANDARD" or t.startswith("IRREGULAR")
+
+
+def fix_nonstandard_surface_ops(zos_system) -> int:
+    """向导/明细写入后兜底：TSDX/TSDY/TSTX/TSTY 指向非 Standard/Irregular
+    面（如偶次非球面）时被 Zemax 判为 invalid，改用单面元件操作数
+    TEDX/TEDY/TETX/TETY（Int1=Int2=该面，Zemax 官方向导写法）。
+
+    成组约束：同一面的元件操作数必须紧邻、按 TEDX→TEDY→TETX→TETY 顺序，
+    否则报 "must be nested in preceding operand group"。因此不做原地
+    ChangeType（会散落在各类别块中），而是先收集并删除非标准面的
+    面级操作数行，再在 TDE 末尾按面成组追加。返回修正行数。
+    """
+    import ZOSAPI
+    T = ZOSAPI.Editors.TDE.ToleranceOperandType
+
+    tde = zos_system.TDE
+    lde = zos_system.LDE
+    type_cache: dict[int, str] = {}
+
+    # 面号 → {元件操作数名: (min, max, 原注释)}
+    collected: dict[int, dict[str, tuple[float, float, str]]] = {}
+    to_remove: list[int] = []
+    for i in range(1, tde.NumberOfOperands + 1):
+        r = tde.GetOperandAt(i)
+        op = str(r.Type)
+        elem_op = _SURFACE_TO_ELEMENT_OPS.get(op)
+        if not elem_op:
+            continue
+        s = int(r.Param1)
+        if s not in type_cache:
+            type_cache[s] = _surface_type_name(lde, s)
+        if _is_standard_or_irregular(type_cache[s]):
+            continue
+        collected.setdefault(s, {})[elem_op] = (
+            float(r.Min), float(r.Max), str(r.Comment or ""))
+        to_remove.append(i)
+
+    if not to_remove:
+        return 0
+
+    # 从后往前删除，避免行号错位
+    for i in sorted(to_remove, reverse=True):
+        tde.RemoveOperandAt(i)
+
+    # 按面成组追加：每面严格 TEDX→TEDY→TETX→TETY 顺序
+    fixed = 0
+    for s in sorted(collected):
+        ops = collected[s]
+        for elem_op in ("TEDX", "TEDY", "TETX", "TETY"):
+            if elem_op not in ops:
+                continue
+            vmin, vmax, old_comment = ops[elem_op]
+            r = tde.AddOperand()
+            if not r.ChangeType(getattr(T, elem_op)):
+                raise RuntimeError(
+                    f"非标准面 S{s} 追加 {elem_op} 失败（面型 {type_cache[s]}）")
+            r.Param1 = s
+            r.Param2 = s
+            r.Min = vmin
+            r.Max = vmax
+            note = f"S{s} 非标准面({type_cache[s]}) 单面元件组 {elem_op}"
+            r.Comment = f"{old_comment}；{note}" if old_comment else note
+            fixed += 1
+    return fixed
+
+
 def _find_tde_row(tde, op: str, s1: int, s2: int):
     """在 TDE 中按 (类型, Param1, Param2) 查找匹配行，返回行号或 0。"""
     import ZOSAPI
@@ -384,6 +474,7 @@ def build_and_write(zos_system, wizard_rows: list[dict],
                       focus_compensation=focus_compensation)
     if detail_rows:
         apply_detail_to_tde(zos_system, detail_rows)
+    fix_nonstandard_surface_ops(zos_system)
     if comp_surface and int(comp_surface) > 0:
         add_back_focus_compensator(zos_system, int(comp_surface),
                                    comp_min, comp_max)
