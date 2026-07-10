@@ -66,14 +66,30 @@ def _glass_surfaces(group: lens_scanner.LensGroup) -> list[int]:
     return list(range(group.start_surface, group.end_surface))
 
 
+def _supports_surface_ops(surf_type: str) -> bool:
+    """该面型是否支持面级偏心/倾斜操作数 TSDX/TSDY/TSTX/TSTY。
+
+    Zemax 手册 p.1741/p.1819：这些操作数仅支持 Standard/Irregular 面；
+    zmx 的 TYPE 名截断为 8 字符（IRREGULAR→IRREGULA）。
+    """
+    t = (surf_type or "STANDARD").strip().upper()
+    return t == "STANDARD" or t.startswith("IRREGULA")
+
+
 def build_detail_rows(groups: list[lens_scanner.LensGroup],
-                      values: dict[int, dict]) -> list[dict]:
+                      values: dict[int, dict],
+                      surf_types: dict[int, str] | None = None) -> list[dict]:
     """把逐镜片填写值转换为 输入_公差明细 行。
 
     values[group.index] = {"半径": float|None, ..., "半径单位": "光圈"/"mm", "跳过": bool}
     留空(None)的项不生成行。
+    surf_types: 面号→TYPE（lens_scanner.ScanResult.surf_type_map）。
+    非 Standard/Irregular 面（如偶次非球面 EVENASPH）的面偏心/倾斜改用
+    单面元件操作数 TEDX/TEDY/TETX/TETY（Int1=Int2=该面），且同一面的
+    几项必须紧邻成组（Zemax 官方向导即此写法，顺序 TEDX→TEDY→TETX→TETY）。
     """
     rows: list[dict] = []
+    surf_types = surf_types or {}
 
     def add(op: str, s1: int, s2: int, val: float, note: str) -> None:
         rows.append({"操作数": op, "面1": s1, "面2": s2,
@@ -86,6 +102,14 @@ def build_detail_rows(groups: list[lens_scanner.LensGroup],
         tag = f"镜片{g.index} {'+'.join(g.materials)}"
         radius_op = "TRAD" if str(v.get("半径单位", "光圈")) == "mm" else "TFRN"
         known_keys = {key for key, _n, _u, _d in _ITEMS}
+
+        # 面级偏心/倾斜先按面收集，最后统一成组输出（不选偏心只选倾斜等
+        # 任意组合均可，缺项自然不生成行）。
+        surf_vals: dict[int, dict[str, float]] = {}
+
+        def stash(label: str, s: int, val: float) -> None:
+            surf_vals.setdefault(s, {})[label] = val
+
         for key, val in v.items():
             if key not in known_keys or val in (None, ""):
                 continue
@@ -98,16 +122,16 @@ def build_detail_rows(groups: list[lens_scanner.LensGroup],
                     add("TTHI", s, s, val, f"{tag} 厚度 S{s}")
             elif key == "面偏心X":
                 for s in _lens_surfaces(g):
-                    add("TSDX", s, s, val, f"{tag} 面偏心X S{s}")
+                    stash("偏心X", s, val)
             elif key == "面偏心Y":
                 for s in _lens_surfaces(g):
-                    add("TSDY", s, s, val, f"{tag} 面偏心Y S{s}")
+                    stash("偏心Y", s, val)
             elif key == "面倾斜X":
                 for s in _lens_surfaces(g):
-                    add("TSTX", s, s, val, f"{tag} 面倾斜X S{s}")
+                    stash("倾斜X", s, val)
             elif key == "面倾斜Y":
                 for s in _lens_surfaces(g):
-                    add("TSTY", s, s, val, f"{tag} 面倾斜Y S{s}")
+                    stash("倾斜Y", s, val)
             elif key == "元件偏心X":
                 add("TEDX", g.start_surface, g.end_surface, val, f"{tag} 元件偏心X")
             elif key == "元件偏心Y":
@@ -127,6 +151,23 @@ def build_detail_rows(groups: list[lens_scanner.LensGroup],
                     add("TABB", s, s, val, f"{tag} 阿贝% S{s}")
             elif key == "空气间隔":
                 add("TTHI", g.end_surface, g.end_surface, val, f"{tag} 后空气间隔 S{g.end_surface}")
+
+        # 逐面输出面级偏心/倾斜：
+        # - 标准/不规则面 → TSDX/TSDY/TSTX/TSTY（独立操作数，顺序不敏感）
+        # - 非标准面（偶次非球面等）→ TEDX/TEDY/TETX/TETY 紧邻成组，Int1=Int2=该面
+        for s in sorted(surf_vals):
+            d = surf_vals[s]
+            if _supports_surface_ops(surf_types.get(s, "STANDARD")):
+                op_map = (("偏心X", "TSDX"), ("偏心Y", "TSDY"),
+                          ("倾斜X", "TSTX"), ("倾斜Y", "TSTY"))
+                suffix = ""
+            else:
+                op_map = (("偏心X", "TEDX"), ("偏心Y", "TEDY"),
+                          ("倾斜X", "TETX"), ("倾斜Y", "TETY"))
+                suffix = "（非标准面单面元件组）"
+            for label, op in op_map:
+                if label in d:
+                    add(op, s, s, d[label], f"{tag} 面{label} S{s}{suffix}")
     return rows
 
 
@@ -652,7 +693,8 @@ class TolWizardDialog(QtWidgets.QDialog):
                 f"视场={seq}，产品={self.cb_merit_product.currentText()}")
 
     def _show_preview_page(self) -> None:
-        rows = build_detail_rows(self._groups, self._values)
+        rows = build_detail_rows(self._groups, self._values,
+                                 self._scan.surf_type_map)
         headers = ["操作数", "面1", "面2", "Min", "Max", "注释"]
         self.lb_merit_summary.setText(self._merit_summary_text())
         # 补偿线对默认与评价函数页的 MTF 频率一致（用户手动改过则不覆盖）
@@ -679,7 +721,8 @@ class TolWizardDialog(QtWidgets.QDialog):
         self._show_merit_page()
 
     def _on_generate(self) -> None:
-        rows = build_detail_rows(self._groups, self._values)
+        rows = build_detail_rows(self._groups, self._values,
+                                 self._scan.surf_type_map)
         if not rows:
             return
         comp_off = self.cb_comp_mode.currentText().strip() == "无"
