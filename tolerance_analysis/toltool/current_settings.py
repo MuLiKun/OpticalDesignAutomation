@@ -10,11 +10,11 @@
 from __future__ import annotations
 
 import os
-import re
 
 from openpyxl import load_workbook
 
 from . import excel_io
+from ._utils import _enum_name
 from .field_mapping import build_field_items, report_label as _field_report_label
 
 _FIELD_SMALL_OPS = {"RSCE", "RWCE", "GENC"}
@@ -26,16 +26,6 @@ _REPORT_FILTERS = {
     "common": "常用评价类",
 }
 _PARAM_COLS = [f"Param{i}" for i in range(1, 9)]
-_OP_RE = re.compile(r"[A-Z]{3,4}")
-
-
-def _enum_name(value) -> str:
-    text = str(value or "").strip()
-    if "." in text:
-        text = text.rsplit(".", 1)[-1]
-    text = text.upper()
-    match = _OP_RE.search(text)
-    return match.group(0) if match else text
 
 
 def _cell_value(row, merit_column, name: str):

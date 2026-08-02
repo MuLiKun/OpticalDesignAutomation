@@ -15,6 +15,7 @@ import os
 import sys
 
 from toltool import current_settings, excel_io, standard_templates
+from toltool._utils import _yes, _as_int
 
 
 def _cmd_init_template(args) -> int:
@@ -51,17 +52,6 @@ def _cmd_read_only(args) -> int:
         print(f"{s.index:>3}  {s.comment[:12]:<12}  "
               f"{s.radius:>12.5g}  {s.thickness:>10.5g}  {s.material}")
     return 0
-
-
-def _yes(v) -> bool:
-    return str(v).strip().upper() in ("Y", "YES", "1", "TRUE", "是")
-
-
-def _as_int(v, default: int) -> int:
-    try:
-        return int(float(v))
-    except (TypeError, ValueError):
-        return default
 
 
 def _standard_config_path(args) -> str:

@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from openpyxl import load_workbook
 
 from . import excel_io
+from ._utils import _field_label
 
 
 @dataclass(frozen=True)
@@ -132,12 +133,6 @@ PRODUCT_DESCRIPTIONS = {
 }
 DEFAULT_PRODUCT_TYPE = "RX"
 DEFAULT_TEMPLATE_NAME = "标准分析"
-
-
-def _field_label(value: float) -> str:
-    if abs(float(value)) < 1e-12:
-        return "F0"
-    return f"F{float(value):g}"
 
 
 def _spot_operands(fields: tuple[float, ...]) -> tuple[OperandSpec, ...]:

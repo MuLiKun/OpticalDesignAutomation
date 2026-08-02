@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from ._utils import _num
+
 # 滤光片材料（精确匹配，大写）
 FILTER_MATERIALS = {"AF32ECO", "D263TECO"}
 
@@ -117,13 +119,6 @@ def read_zmx_text(path: str) -> str:
         except (UnicodeDecodeError, LookupError):
             continue
     return data.decode("latin1", errors="ignore")
-
-
-def _num(text: str) -> float | None:
-    try:
-        return float(text)
-    except (TypeError, ValueError):
-        return None
 
 
 def parse_surfaces(path: str) -> list[SurfaceInfo]:

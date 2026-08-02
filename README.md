@@ -17,6 +17,8 @@ zemax-skills-advance_TOL/
 │   ├── make_backup.py                  本地备份脚本
 │   ├── build.ps1 / gui.spec            PyInstaller 打包脚本
 │   ├── toltool/                        核心代码包
+│   │   ├── _utils.py                   公共工具函数（_yes/_num/_enum_name 等）
+│   │   ├── _validate.py                配置校验函数（从 pipeline.py 拆出）
 │   │   ├── pipeline.py                 主流程编排
 │   │   ├── lens_scanner.py             zmx 只读扫描（镜片分组/指纹，主流程共用）
 │   │   ├── excel_io.py                 Excel 配置读写
@@ -139,7 +141,7 @@ powershell -ExecutionPolicy Bypass -File tolerance_analysis\build.ps1
 核心模块语法检查：
 
 ```powershell
-.\.venv\Scripts\python.exe -m py_compile tolerance_analysis\toltool\pipeline.py tolerance_analysis\toltool\tde_builder.py tolerance_analysis\toltool\mfe_builder.py tolerance_analysis\toltool\tsc_builder.py tolerance_analysis\toltool\tol_runner.py tolerance_analysis\toltool\ztd_reader.py tolerance_analysis\toltool\zos_connect.py tolerance_analysis\toltool\lens_scanner.py tolerance_analysis\toltool\sensitivity_reader.py
+.\.venv\Scripts\python.exe -m py_compile tolerance_analysis\toltool\_utils.py tolerance_analysis\toltool\_validate.py tolerance_analysis\toltool\pipeline.py tolerance_analysis\toltool\tde_builder.py tolerance_analysis\toltool\mfe_builder.py tolerance_analysis\toltool\tsc_builder.py tolerance_analysis\toltool\tol_runner.py tolerance_analysis\toltool\ztd_reader.py tolerance_analysis\toltool\zos_connect.py tolerance_analysis\toltool\lens_scanner.py tolerance_analysis\toltool\sensitivity_reader.py
 ```
 
 基础检查脚本：
@@ -184,6 +186,15 @@ Zemax 连接和 DLL 查找细节见 skill：
 - [.trae/skills/zemax-zosapi-connector/SKILL.md](.trae/skills/zemax-zosapi-connector/SKILL.md)
 
 本机 Zemax 安装路径可通过复制 `tolerance_analysis/zemax_config.ini.example` 为 `zemax_config.ini` 指定（该文件不入库）。
+
+`main.py` 中 ZMX/CONFIG/OUTPUT_DIR 的默认值可通过环境变量覆盖（优先级：命令行参数 > 环境变量 > 代码默认值）：
+
+| 环境变量 | 说明 |
+|---|---|
+| `ZEMAX_TOL_ZMX` | 待分析 zmx 文件路径 |
+| `ZEMAX_TOL_CONFIG` | Excel 配置文件路径 |
+| `ZEMAX_TOL_OUTDIR` | 输出目录 |
+| `ZEMAX_TOL_CONNECT` | 连接模式（standalone / extension） |
 
 ---
 

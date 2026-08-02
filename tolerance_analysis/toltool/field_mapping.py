@@ -13,6 +13,8 @@ import copy
 import math
 from dataclasses import asdict, dataclass
 
+from ._utils import _yes, _num
+
 
 DEFAULT_TARGETS = "0,-0.25,0.25,-0.5,0.5,-0.7,0.7,-0.9,0.9,-1,1"
 _DEFAULT_THRESHOLD = 0.05
@@ -62,10 +64,6 @@ class FieldMappingResult:
     def to_dict(self) -> dict:
         data = asdict(self)
         return data
-
-
-def yes(value) -> bool:
-    return str(value).strip().upper() in ("Y", "YES", "1", "TRUE", "是")
 
 
 def parse_targets(value) -> list[float]:
@@ -236,15 +234,6 @@ def _target_value(row: dict, original_fields: list[FieldItem], final_matches: li
     return match.target_normalized if match else target
 
 
-def _num(value):
-    if value is None or (isinstance(value, str) and not value.strip()):
-        return None
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
-
-
 def _apply_to_mfe_rows(mfe_rows: list[dict], original_fields: list[FieldItem],
                        matches: list[FieldMatch], explicit_only: bool = False) -> tuple[list[dict], int]:
     new_rows = copy.deepcopy(mfe_rows)
@@ -323,7 +312,7 @@ def _apply_to_report_rows(report_rows: list[dict], mfe_rows: list[dict],
 
 
 def preview(zos_system, run_params: dict, simulate_insert: bool = False) -> FieldMappingResult:
-    enabled = yes(run_params.get("启用视场映射", "N"))
+    enabled = _yes(run_params.get("启用视场映射", "N"))
     strategy = str(run_params.get("视场插入策略") or "禁用").strip()
     messages: list[str] = []
     if not enabled:
@@ -356,7 +345,7 @@ def preview(zos_system, run_params: dict, simulate_insert: bool = False) -> Fiel
 
 
 def process(zos_system, cfg, run_params: dict, log=print) -> tuple[object, FieldMappingResult]:
-    enabled = yes(run_params.get("启用视场映射", "N"))
+    enabled = _yes(run_params.get("启用视场映射", "N"))
     strategy = str(run_params.get("视场插入策略") or "禁用").strip()
     messages: list[str] = []
     if not enabled:

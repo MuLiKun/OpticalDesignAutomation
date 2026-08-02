@@ -33,6 +33,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ._utils import _yes as _is_yes, _num
+
 
 # 明细表用：操作数 → 是否成对面
 PAIRED_OPS = {"TTHI", "TEDX", "TEDY", "TETX", "TETY"}
@@ -55,16 +57,6 @@ class TolItem:
 
     def key(self) -> tuple:
         return (self.op, self.surf1, self.surf2)
-
-
-def _is_yes(v) -> bool:
-    return str(v).strip().upper() in ("Y", "YES", "1", "TRUE", "是")
-
-
-def _num(v, default=None):
-    if v is None or (isinstance(v, str) and v.strip() == ""):
-        return default
-    return float(v)
 
 
 def _cat_name(v) -> str:

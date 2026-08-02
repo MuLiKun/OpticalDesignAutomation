@@ -29,6 +29,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from toltool import pipeline
 from toltool import standard_templates
 from toltool import zos_connect
+from toltool._utils import _yes, _as_int
 
 
 def _app_dir() -> str:
@@ -52,17 +53,6 @@ DEFAULT_CONFIG = _default_config()
 DEFAULT_OUTDIR = _app_dir()
 SETTINGS_ORG = os.environ.get("ZEMAX_TOL_SETTINGS_ORG", "ZemaxTools")
 SETTINGS_APP = os.environ.get("ZEMAX_TOL_SETTINGS_APP", "ZemaxToleranceTool")
-
-
-def _yes(v) -> bool:
-    return str(v).strip().upper() in ("Y", "YES", "1", "TRUE", "是")
-
-
-def _as_int(v, default: int) -> int:
-    try:
-        return int(float(v))
-    except (TypeError, ValueError):
-        return default
 
 
 def _resolve_ztd_config(ztd: str, fallback_config: str) -> tuple[str, str]:

@@ -2,729 +2,33 @@
 
 GUI 与命令行入口共享这里的核心流程：
 连接 → 建 TDE → 建 MFE → 建 TSC → Save → 跑蒙卡。
+
+职责单一的辅助函数已拆分到子模块：
+  _nominals.py     MFE 名义值计算与行操作
+  _trimming.py     标准模板镜头面范围裁剪
+  _dynamic_metrics.py  运行期动态评价项生成
+  _run_utils.py    目录/日志/JSON/视场映射报告
+  _validate.py     配置校验
 """
 
 from __future__ import annotations
 
 import copy
-import json
-import math
 import os
-import re
 from dataclasses import dataclass
-from datetime import datetime
 
 from . import (zos_connect, excel_io, tde_builder, mfe_builder,
                tsc_builder, tol_runner, field_mapping, current_settings,
-               sensitivity_reader, lens_scanner)
-
-
-def _as_int(v, default: int) -> int:
-    try:
-        return int(float(v))
-    except (TypeError, ValueError):
-        return default
-
-
-def _yes(v) -> bool:
-    return str(v).strip().upper() in ("Y", "YES", "1", "TRUE", "是")
-
-
-def _num(v, default=None):
-    if v is None or (isinstance(v, str) and str(v).strip() == ""):
-        return default
-    try:
-        return float(v)
-    except (TypeError, ValueError):
-        return default
-
-
-def _safe_name(name: str) -> str:
-    text = re.sub(r'[<>:"/\\|?*\s]+', "_", str(name).strip())
-    text = text.strip("._")
-    return text or "lens"
-
-
-def _enum_name(value) -> str:
-    text = str(value or "").strip()
-    if "." in text:
-        text = text.rsplit(".", 1)[-1]
-    text = text.upper()
-    match = re.search(r"[A-Z]{3,4}", text)
-    return match.group(0) if match else text
-
-
-def _mfe_row_map(mfe_rows: list[dict]) -> dict[int, dict]:
-    out: dict[int, dict] = {}
-    for row in mfe_rows:
-        try:
-            line_no = int(float(row.get("行号")))
-        except (TypeError, ValueError):
-            continue
-        out[line_no] = row
-    return out
-
-
-def _row_param(row: dict, name: str, default: float = 0) -> float:
-    value = row.get(name)
-    if value in (None, ""):
-        return default
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def _calc_mfe_row_nominal(zos_system, rows: dict[int, dict], line_no: int,
-                          cache: dict[int, float]) -> float:
-    if line_no in cache:
-        return cache[line_no]
-    row = rows.get(line_no)
-    if not row:
-        return float("nan")
-    op = str(row.get("操作数") or "").strip().upper()
-    try:
-        if op == "CONS":
-            value = float(row.get("目标") or 0)
-        elif op == "DIFF":
-            value = (_calc_mfe_row_nominal(zos_system, rows, int(_row_param(row, "Param1")), cache)
-                     - _calc_mfe_row_nominal(zos_system, rows, int(_row_param(row, "Param2")), cache))
-        elif op == "DIVI":
-            denominator = _calc_mfe_row_nominal(zos_system, rows, int(_row_param(row, "Param2")), cache)
-            value = (_calc_mfe_row_nominal(zos_system, rows, int(_row_param(row, "Param1")), cache)
-                     / denominator) if denominator else float("nan")
-        elif op == "PROB":
-            value = _calc_mfe_row_nominal(zos_system, rows, int(_row_param(row, "Param1")), cache)
-            factor = _row_param(row, "Param3", 1)
-            value *= factor
-        elif op == "BLNK":
-            value = 0.0
-        else:
-            value = _operand_value(
-                zos_system, op,
-                _row_param(row, "Param1"), _row_param(row, "Param2"),
-                _row_param(row, "Param3"), _row_param(row, "Param4"),
-                _row_param(row, "Param5"), _row_param(row, "Param6"),
-                _row_param(row, "Param7"), _row_param(row, "Param8"))
-    except Exception:
-        value = float("nan")
-    cache[line_no] = value
-    return value
-
-
-def _mfe_editor_value(zos_system, line_no: int) -> float:
-    """读取 MFE 编辑器指定行「Value」列的当前计算值（评价函数名义值）。"""
-    import ZOSAPI
-
-    mfe = zos_system.MFE
-    row = mfe.GetOperandAt(line_no)
-    merit_column = ZOSAPI.Editors.MFE.MeritColumn
-    # 优先读 Value 列；不同版本列名可能是 Value/CurrentValue
-    for name in ("Value", "CurrentValue"):
-        col = getattr(merit_column, name, None)
-        if col is None:
-            continue
-        try:
-            return float(row.GetOperandCell(col).Value)
-        except Exception:
-            continue
-    # 退化：行对象的 Value 属性
-    return float(getattr(row, "Value"))
-
-
-def _read_report_nominals(zos_system, mfe_rows: list[dict], report_rows: list[dict]) -> list[dict]:
-    out: list[dict] = []
-    rows = _mfe_row_map(mfe_rows)
-    cache: dict[int, float] = {}
-    # 读取前先触发一次评价函数计算，确保 Value 列已刷新。
-    for method in ("CalculateMeritFunction", "CalculateMeritFunctionAndUpdateOperands"):
-        fn = getattr(zos_system.MFE, method, None)
-        if callable(fn):
-            try:
-                fn()
-                break
-            except Exception:
-                continue
-    for row in report_rows:
-        if not _yes(row.get("启用")) or not row.get("标签"):
-            continue
-        new_row = dict(row)
-        value = float("nan")
-        try:
-            line_no = int(float(row.get("MF行号")))
-        except (TypeError, ValueError):
-            line_no = None
-        if line_no is not None:
-            # 首选：直接读 MFE 编辑器该行的计算值（真正的评价函数值）。
-            try:
-                value = _mfe_editor_value(zos_system, line_no)
-            except Exception:
-                value = float("nan")
-            # 兜底：按操作数自行递归计算（编辑器读值失败时）。
-            if not math.isfinite(value):
-                try:
-                    value = _calc_mfe_row_nominal(zos_system, rows, line_no, cache)
-                except Exception:
-                    value = float("nan")
-        if math.isfinite(value):
-            new_row["名义值"] = value
-            new_row["名义值来源"] = "MFE_OPERAND"
-        else:
-            new_row["名义值"] = ""
-        out.append(new_row)
-    return out
-
-
-def _read_tde_meta(zos_system) -> list[dict]:
-    tde = zos_system.TDE
-    rows: list[dict] = []
-    for i in range(1, int(tde.NumberOfOperands) + 1):
-        r = tde.GetOperandAt(i)
-        op = _enum_name(getattr(r, "Type", ""))
-        if not op or op == "BLNK":
-            continue
-        row = {"行号": i, "操作数": op}
-        for name in ("Param1", "Param2", "Min", "Max", "Comment"):
-            try:
-                row[name] = getattr(r, name)
-            except Exception:
-                row[name] = ""
-        if op == "COMP":
-            comment = str(row.get("Comment") or "").strip()
-            surf = row.get("Param1")
-            suffix = f"_S{surf}" if str(surf).strip() else ""
-            row["标签"] = comment or f"COMP{suffix}"
-            row["方向"] = ""
-            row["单位"] = "mm"
-        rows.append(row)
-    return rows
-
-
-def _make_run_dir(zmx: str, outdir: str | None) -> tuple[str, str]:
-    src_base = os.path.splitext(os.path.basename(zmx))[0]
-    parent = os.path.abspath(outdir) if outdir \
-        else os.path.dirname(os.path.abspath(zmx))
-    os.makedirs(parent, exist_ok=True)
-    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_dir = os.path.join(parent, f"公差分析_{_safe_name(src_base)}_{stamp}")
-    suffix = 1
-    unique_dir = run_dir
-    while os.path.exists(unique_dir):
-        suffix += 1
-        unique_dir = f"{run_dir}_{suffix}"
-    os.makedirs(unique_dir, exist_ok=False)
-    return parent, unique_dir
-
-
-def _json_default(value):
-    if isinstance(value, (str, int, float, bool)) or value is None:
-        return value
-    return str(value)
-
-
-def _write_json(path: str, data: dict) -> None:
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2, default=_json_default)
-
-
-def _fmt_num(value) -> str:
-    if value is None:
-        return "-"
-    try:
-        return f"{float(value):.4f}"
-    except (TypeError, ValueError):
-        return str(value)
-
-
-def _insert_strategy_label(value) -> str:
-    text = str(value or "").strip()
-    if _yes(text):
-        return "自动插入"
-    if not text:
-        return "禁用"
-    return text
-
-
-def field_mapping_report_lines(result) -> list[str]:
-    missing = [item for item in result.final_matches if item.need_insert]
-    inserted_targets = {item.target_normalized for item in result.inserted_fields}
-    matched_count = len(result.final_matches) - len(missing)
-    title = "视场映射预览" if getattr(result, "is_preview", False) else "视场映射报告"
-    if getattr(result, "is_preview", False) and result.inserted_fields:
-        title += "（已模拟补齐）"
-    if result.inserted_fields:
-        conclusion = f"已匹配 {matched_count}/{len(result.targets)}，本次模拟补齐 {len(result.inserted_fields)}"
-    else:
-        conclusion = f"已匹配 {matched_count}/{len(result.targets)}，需补齐 {len(missing)}"
-    field_by_no = {field.field_no: field for field in result.final_fields}
-    lines = [
-        title,
-        f"结论: {conclusion}",
-        f"阈值: {result.threshold:g}；插入策略: {_insert_strategy_label(result.insert_strategy)}",
-        "",
-        "目标      视场号        X        Y    归一化    偏差  来源/状态",
-    ]
-    for item in result.final_matches:
-        if item.need_insert:
-            status = "仍需补齐"
-        elif item.target_normalized in inserted_targets:
-            status = "已补齐"
-        else:
-            status = "已有"
-        field = field_by_no.get(item.field_no)
-        x = _fmt_num(field.x if field else None)
-        y = _fmt_num(field.y if field else None)
-        lines.append(
-            f"{item.report_label:<8} {str(item.field_no or '-'):>5}  "
-            f"{x:>7}  {y:>7}  {_fmt_num(item.actual_normalized):>7}  "
-            f"{_fmt_num(item.delta):>6}  {status}")
-    if not getattr(result, "is_preview", False):
-        lines.extend([
-            "",
-            f"已插入缺失视场: {len(result.inserted_fields)}",
-            f"已改写 MFE: {result.mfe_updates} 行",
-            f"已改写 REPORT: {result.report_updates} 项",
-        ])
-    if missing:
-        lines.append("")
-        lines.append("需补齐目标: " + ", ".join(item.report_label for item in missing))
-    elif result.messages and not getattr(result, "is_preview", False):
-        lines.append("")
-        lines.extend(str(msg) for msg in result.messages)
-    return lines
-
-
-def _log_field_mapping(result, log) -> None:
-    for line in field_mapping_report_lines(result):
-        if line:
-            log(line)
-
-
-def _write_field_mapping_report(path: str, result) -> None:
-    with open(path, "w", encoding="utf-8") as f:
-        f.write("\n".join(field_mapping_report_lines(result)) + "\n")
-
-
-def _log_to_file(path: str, message: str) -> None:
-    with open(path, "a", encoding="utf-8") as f:
-        f.write(str(message) + "\n")
-
-
-def _tee_logger(log, log_path: str):
-    def emit(message: str) -> None:
-        _log_to_file(log_path, message)
-        log(message)
-    return emit
-
-
-def append_run_log(prep, message: str, log=print) -> None:
-    if getattr(prep, "log_path", ""):
-        _log_to_file(prep.log_path, message)
-    log(message)
-
-
-def _validate_paths(zmx: str, config: str) -> None:
-    errors: list[str] = []
-    if not os.path.isfile(zmx):
-        errors.append(f"ZMX 文件不存在：{zmx}")
-    if not os.path.isfile(config):
-        errors.append(f"Excel 配置不存在：{config}")
-    if errors:
-        raise ValueError("运行前校验失败：\n" + "\n".join(f"- {e}" for e in errors))
-
-
-def _validate_inputs(cfg, rp: dict) -> None:
-    errors: list[str] = []
-    num_runs = _as_int(rp.get("蒙特卡洛次数"), 200)
-    num_to_save = _as_int(rp.get("保存数量"), 10)
-    if num_runs <= 0:
-        errors.append("蒙特卡洛次数必须大于 0")
-    if num_to_save < 0:
-        errors.append("保存数量不能小于 0")
-    if num_to_save > num_runs:
-        errors.append("保存数量不能大于蒙特卡洛次数")
-    comp_mode_key = str(rp.get("补偿器模式") or "无").strip().replace(" ", "").lower()
-    if comp_mode_key not in ("无", "none", "全部优化dls", "全部优化(dls)", "dls",
-                             "全部优化od", "全部优化(od)", "od"):
-        errors.append("补偿器模式仅支持：无、全部优化DLS、全部优化OD")
-
-    valid_mfe_lines: set[int] = set()
-    for row in cfg.mfe:
-        op = str(row.get("操作数") or "").strip()
-        if not op:
-            continue
-        line = row.get("行号")
-        if line in (None, ""):
-            errors.append(f"评价函数操作数 {op} 缺少行号")
-            continue
-        try:
-            line_no = int(float(line))
-        except (TypeError, ValueError):
-            errors.append(f"评价函数行号无效：{line!r}")
-            continue
-        if line_no <= 0:
-            errors.append(f"评价函数行号必须大于 0：{line_no}")
-            continue
-        valid_mfe_lines.add(line_no)
-    dynamic_only = _yes(rp.get("启用动态评价项", "N")) and not valid_mfe_lines
-    if not valid_mfe_lines and not dynamic_only:
-        errors.append("评价函数工作表至少需要 1 行带操作数的有效行")
-
-    report_count = 0
-    for row in cfg.report:
-        if not _yes(row.get("启用")):
-            continue
-        label = str(row.get("标签") or "").strip()
-        mf_line = row.get("MF行号")
-        if not label:
-            errors.append("启用的 REPORT 行缺少标签")
-            continue
-        if mf_line in (None, ""):
-            errors.append(f"REPORT {label} 缺少 MF行号")
-            continue
-        try:
-            mf_line_no = int(float(mf_line))
-        except (TypeError, ValueError):
-            errors.append(f"REPORT {label} 的 MF行号无效：{mf_line!r}")
-            continue
-        if mf_line_no not in valid_mfe_lines:
-            errors.append(f"REPORT {label} 的 MF行号 {mf_line_no} 未在评价函数中找到")
-        report_count += 1
-    if report_count == 0 and not dynamic_only:
-        errors.append("REPORT 至少需要启用 1 个带标签和 MF行号的分项")
-
-    if errors:
-        raise ValueError("运行前校验失败：\n" + "\n".join(f"- {e}" for e in errors))
-
-
-def validate_config_data(cfg):
-    """只校验已读取/生成的配置内容，不连接 Zemax。"""
-    _validate_inputs(cfg, cfg.run_params)
-    return cfg
-
-
-def validate_config(zmx: str, config: str):
-    """只校验文件路径和 Excel 配置，不连接 Zemax。"""
-    _validate_paths(zmx, config)
-    cfg = excel_io.read_config(config)
-    return validate_config_data(cfg)
-
-
-def _rx_start_after_front_plate(surfaces: list[lens_scanner.SurfaceInfo],
-                                start: int, stop: int) -> int:
-    """RX：跳过物面后到镜头之间连续的双面平板玻璃（不限材料）。"""
-    by_no = {s.surface: s for s in surfaces}
-    cur = int(start)
-    while cur + 1 <= stop:
-        s0 = by_no.get(cur)
-        s1 = by_no.get(cur + 1)
-        if s0 is None or s1 is None or not (s0.is_plane and s1.is_plane):
-            break
-        if not s0.has_glass:
-            break
-        cur += 2
-    return cur
-
-
-def _wizard_current_range(cfg) -> tuple[int, int]:
-    starts, stops = [], []
-    for row in cfg.tol_wizard:
-        if not _yes(row.get("启用")):
-            continue
-        s0 = _as_int(row.get("起始面"), 0)
-        s1 = _as_int(row.get("结束面"), 0)
-        if s0 > 0:
-            starts.append(s0)
-        if s1 > 0:
-            stops.append(s1)
-    return (min(starts) if starts else 1, max(stops) if stops else 0)
-
-
-def _set_wizard_range(cfg, start: int, stop: int) -> None:
-    for row in cfg.tol_wizard:
-        if _yes(row.get("启用")):
-            row["起始面"] = int(start)
-            row["结束面"] = int(stop)
-
-
-def _apply_standard_surface_scope_from_zmx(zmx: str, cfg, rp: dict, log=print) -> None:
-    if str(rp.get("分析模式") or "").strip() != "标准模板":
-        return
-    if _yes(rp.get("全部面公差分析", "Y")):
-        return
-    if str(rp.get("标准模板") or "").strip() != "标准分析":
-        log("标准模板镜头面裁剪：全部面=否 仅支持『标准分析』模板，当前模板已按全部面生成。")
-        return
-    product_type = str(rp.get("产品类型") or "RX").strip().upper()
-    if product_type not in ("TX", "RX"):
-        log(f"标准模板镜头面裁剪：产品类型 {product_type!r} 无效（仅支持 TX/RX），已按全部面生成。")
-        return
-    try:
-        surfaces = lens_scanner.parse_surfaces(zmx)
-    except Exception as e:
-        log(f"标准模板镜头面裁剪：读取 ZMX 失败，已按全部面生成。{type(e).__name__}: {e}")
-        return
-    if not surfaces:
-        log("标准模板镜头面裁剪：未从镜头文件读取到面数据（可能为 .zos 二进制或非标准格式），已按全部面生成。")
-        return
-    filters = [s.surface for s in surfaces if s.is_filter]
-    if not filters:
-        log("标准模板镜头面裁剪：未找到 AF32ECO/D263TECO 滤光片，已按全部面生成。")
-        return
-    base_start, base_stop = _wizard_current_range(cfg)
-    if base_stop <= 0:
-        log("标准模板镜头面裁剪：当前公差范围无效，已按全部面生成。")
-        return
-    if product_type == "TX":
-        boundary = max(filters)
-        start, stop = boundary + 2, base_stop
-        reason = f"TX 取最后一个滤光片 {boundary} 面之后"
-    else:
-        boundary = min(filters)
-        start = _rx_start_after_front_plate(surfaces, base_start, boundary - 1)
-        stop = boundary - 1
-        reason = f"RX 取第一个滤光片 {boundary} 面之前"
-    start = max(base_start, start)
-    stop = min(base_stop, stop)
-    if start > stop:
-        log(f"标准模板镜头面裁剪：{reason} 后范围无效({start}-{stop})，已按全部面生成。")
-        return
-    _set_wizard_range(cfg, start, stop)
-    log(f"标准模板镜头面裁剪：全部面=否，{reason}，最终公差范围 {start}-{stop}。")
-
-
-def _fill_auto_standard_surfaces(zos_system, cfg, rp: dict, log=print) -> None:
-    if str(rp.get("分析模式") or "").strip() != "标准模板":
-        return
-    try:
-        end_surface = max(1, int(zos_system.LDE.NumberOfSurfaces) - 2)
-    except (AttributeError, TypeError, ValueError) as e:
-        log(f"自动读取镜头面数失败，保留 Excel 中的公差范围: {e}")
-        return
-    changed = False
-    for row in cfg.tol_wizard:
-        if _as_int(row.get("结束面"), 0) <= 0:
-            row["结束面"] = end_surface
-            changed = True
-    if changed:
-        log(f"标准模板自动公差范围: 1-{end_surface}")
-
-
-def _operand_value(zos_system, op: str, *params: float) -> float:
-    import ZOSAPI
-
-    values = list(params[:8])
-    while len(values) < 8:
-        values.append(0)
-    op_enum = getattr(ZOSAPI.Editors.MFE.MeritOperandType, op)
-    return float(zos_system.MFE.GetOperandValue(op_enum, *values))
-
-
-def _next_mfe_line(cfg) -> int:
-    lines: list[int] = []
-    for row in cfg.mfe:
-        try:
-            lines.append(int(float(row.get("行号"))))
-        except (TypeError, ValueError):
-            pass
-    return (max(lines) + 1) if lines else 2
-
-
-def _mfe_row(line_no: int, op: str, *, target=0, weight=0,
-             comment: str = "", field=None, **params) -> dict:
-    row = {
-        "行号": line_no,
-        "操作数": op,
-        "目标": target,
-        "权重": weight,
-        "注释": comment,
-        "目标归一化视场": "" if field is None else field,
-        "视场映射说明": "标准模板动态生成",
-        "归一化视场": "" if field is None else field,
-    }
-    for i in range(1, 9):
-        row[f"Param{i}"] = params.get(f"Param{i}", "")
-    return row
-
-
-def _report_labels(cfg) -> set[str]:
-    return {str(row.get("标签") or "").strip() for row in cfg.report}
-
-
-def _pointing_angle_fields(template_name: str) -> tuple[float, ...]:
-    """指向角评价的目标视场（归一化 Hy）。
-
-    标准分析沿用标准视场 F0/F0.5/F0.9/F-0.9；
-    完整视场分析只取正视场（含 0 视场）到最大 F1。
-    RAID 按 Hx/Hy 直接追迹主光线，不依赖 field_mapping 插入的视场号，
-    因此这里用归一化 Hy 直接作为 RAID 的 Param4。
-    """
-    if str(template_name or "").strip() == "完整视场分析":
-        return (0, 0.25, 0.5, 0.7, 0.9, 1)
-    return (0, 0.5, 0.9, -0.9)
-
-
-def _field_label(value: float) -> str:
-    if abs(float(value)) < 1e-12:
-        return "F0"
-    return f"F{float(value):g}"
-
-
-def _append_standard_dynamic_metrics(zos_system, cfg, rp: dict, center_wave: int,
-                                     log=print):
-    # 标准模板默认启用；高级 Excel 模式可通过运行参数「启用动态评价项=Y」开启
-    # （公差填写向导生成的配置使用该开关）。
-    standard_dynamic = str(rp.get("分析模式") or "").strip() == "标准模板"
-    if not standard_dynamic and not _yes(rp.get("启用动态评价项", "N")):
-        return cfg
-    if center_wave <= 0:
-        log("标准模板动态评价项：中心波长号无效，已跳过中心指向偏移、焦距偏移百分比和 FOV。")
-        return cfg
-
-    new_cfg = copy.deepcopy(cfg)
-    labels = _report_labels(new_cfg)
-    line = _next_mfe_line(new_cfg)
-    added: list[str] = []
-
-    if _yes(rp.get("启用中心指向偏移", "N")) and not {
-        "POINTING_DY_F0_mm", "POINTING_DX_F0_mm"}.issubset(labels):
-        field_no = _as_int(rp.get("中心指向视场号"), 1)
-        if field_no <= 0:
-            field_no = 1
-        ceny0 = _operand_value(zos_system, "CENY", 16, center_wave, field_no, 0, 5)
-        cenx0 = _operand_value(zos_system, "CENX", 16, center_wave, field_no, 0, 5)
-
-        new_cfg.mfe.append(_mfe_row(line, "BLNK", comment="接收指向偏移 F0/mm")); line += 1
-        ceny_line = line
-        new_cfg.mfe.append(_mfe_row(line, "CENY", comment="CENY_F0_current", field=0,
-                                    Param1=16, Param2=center_wave, Param3=field_no,
-                                    Param4=0, Param5=5)); line += 1
-        cenx_line = line
-        new_cfg.mfe.append(_mfe_row(line, "CENX", comment="CENX_F0_current", field=0,
-                                    Param1=16, Param2=center_wave, Param3=field_no,
-                                    Param4=0, Param5=5)); line += 1
-        cons_y_line = line
-        new_cfg.mfe.append(_mfe_row(line, "CONS", target=ceny0, comment="CENY_F0_nominal")); line += 1
-        cons_x_line = line
-        new_cfg.mfe.append(_mfe_row(line, "CONS", target=cenx0, comment="CENX_F0_nominal")); line += 1
-        diff_y_line = line
-        new_cfg.mfe.append(_mfe_row(line, "DIFF", comment="POINTING_DY_F0_mm",
-                                    Param1=ceny_line, Param2=cons_y_line)); line += 1
-        diff_x_line = line
-        new_cfg.mfe.append(_mfe_row(line, "DIFF", comment="POINTING_DX_F0_mm",
-                                    Param1=cenx_line, Param2=cons_x_line)); line += 1
-        new_cfg.report.extend([
-            {"启用": "Y", "标签": "POINTING_DY_F0_mm", "MF行号": diff_y_line, "方向": "小", "单位": "mm"},
-            {"启用": "Y", "标签": "POINTING_DX_F0_mm", "MF行号": diff_x_line, "方向": "小", "单位": "mm"},
-        ])
-        added.extend(["POINTING_DY_F0_mm", "POINTING_DX_F0_mm"])
-        log(f"中心指向偏移 F0：视场号 {field_no}，CENY0={ceny0:.12g}，CENX0={cenx0:.12g}")
-
-    template_name = str(rp.get("标准模板") or "").strip()
-    pointing_angle_fields = _pointing_angle_fields(template_name)
-    angle_labels = {f"POINTING_ANGLE_{_field_label(field)}_deg" for field in pointing_angle_fields}
-    if _yes(rp.get("启用指向角", "Y")) and not angle_labels.issubset(_report_labels(new_cfg)):
-        image_surface = max(0, int(zos_system.LDE.NumberOfSurfaces) - 1)
-        new_cfg.mfe.append(_mfe_row(line, "BLNK", comment="POINTING_ANGLE_deg")); line += 1
-        appended_labels: list[str] = []
-        for field in pointing_angle_fields:
-            label = f"POINTING_ANGLE_{_field_label(field)}_deg"
-            if label in _report_labels(new_cfg):
-                continue
-            raid_line = line
-            nominal = _operand_value(zos_system, "RAID", image_surface, center_wave,
-                                     0, field, 0, 0)
-            new_cfg.mfe.append(_mfe_row(line, "RAID", comment=f"{label}_current", field=field,
-                                        Param1=image_surface, Param2=center_wave,
-                                        Param3=0, Param4=field, Param5=0, Param6=0)); line += 1
-            cons_line = line
-            new_cfg.mfe.append(_mfe_row(line, "CONS", target=nominal,
-                                        comment=f"{label}_nominal", field=field)); line += 1
-            diff_line = line
-            new_cfg.mfe.append(_mfe_row(line, "DIFF", comment=label, field=field,
-                                        Param1=raid_line, Param2=cons_line)); line += 1
-            new_cfg.report.append({
-                "启用": "Y",
-                "标签": label,
-                "MF行号": diff_line,
-                "方向": "",
-                "单位": "deg",
-            })
-            appended_labels.append(label)
-        if appended_labels:
-            added.extend(appended_labels)
-            log(f"指向角：使用像面 {image_surface} 面，已追加 {len(appended_labels)} 项。")
-
-    if _yes(rp.get("启用焦距偏移百分比", "N")) and "EFL_DELTA_PCT" not in _report_labels(new_cfg):
-        efl0 = _operand_value(zos_system, "EFFL", center_wave)
-        if abs(efl0) < 1e-15:
-            log("焦距偏移百分比：名义 EFL 接近 0，已跳过 EFL_DELTA_PCT。")
-        else:
-            new_cfg.mfe.append(_mfe_row(line, "BLNK", comment="EFL")); line += 1
-            efl_line = line
-            new_cfg.mfe.append(_mfe_row(line, "EFFL", comment="EFFL_current",
-                                        Param1=center_wave)); line += 1
-            cons_line = line
-            new_cfg.mfe.append(_mfe_row(line, "CONS", target=efl0, comment="EFFL_nominal")); line += 1
-            diff_line = line
-            new_cfg.mfe.append(_mfe_row(line, "DIFF", comment="EFL_delta",
-                                        Param1=efl_line, Param2=cons_line)); line += 1
-            divi_line = line
-            new_cfg.mfe.append(_mfe_row(line, "DIVI", comment="EFL_delta_ratio",
-                                        Param1=diff_line, Param2=cons_line)); line += 1
-            new_cfg.mfe.append(_mfe_row(line, "BLNK", comment="DELTA EFL")); line += 1
-            pct_line = line
-            new_cfg.mfe.append(_mfe_row(line, "PROB", comment="EFL_DELTA_PCT",
-                                        Param1=divi_line, Param3=100)); line += 1
-            new_cfg.report.append({
-                "启用": "Y",
-                "标签": "EFL_DELTA_PCT",
-                "MF行号": pct_line,
-                "方向": "小",
-                "单位": "%",
-            })
-            added.append("EFL_DELTA_PCT")
-            log(f"焦距偏移百分比：EFFL0={efl0:.12g}，已追加 EFL_DELTA_PCT。")
-
-    if _yes(rp.get("启用FOV", "Y")) and "FOV_Y_deg" not in _report_labels(new_cfg):
-        product_type = str(rp.get("产品类型") or "").strip().upper()
-        if product_type == "TX":
-            surface = max(0, int(zos_system.LDE.NumberOfSurfaces) - 1)
-            surface_desc = "像面"
-        else:
-            surface = 0
-            surface_desc = "物面"
-        new_cfg.mfe.append(_mfe_row(line, "BLNK", comment=f"FOV_Y_{product_type or 'RX'}_deg")); line += 1
-        reac_pos_line = line
-        new_cfg.mfe.append(_mfe_row(line, "REAC", comment="FOV_HY_POS_REAC",
-                                    Param1=surface, Param2=center_wave,
-                                    Param3=0, Param4=1, Param5=0, Param6=0)); line += 1
-        reac_neg_line = line
-        new_cfg.mfe.append(_mfe_row(line, "REAC", comment="FOV_HY_NEG_REAC",
-                                    Param1=surface, Param2=center_wave,
-                                    Param3=0, Param4=-1, Param5=0, Param6=0)); line += 1
-        acos_pos_line = line
-        new_cfg.mfe.append(_mfe_row(line, "ACOS", comment="FOV_HY_POS_deg",
-                                    Param1=reac_pos_line, Param2=1)); line += 1
-        acos_neg_line = line
-        new_cfg.mfe.append(_mfe_row(line, "ACOS", comment="FOV_HY_NEG_deg",
-                                    Param1=reac_neg_line, Param2=1)); line += 1
-        fov_line = line
-        new_cfg.mfe.append(_mfe_row(line, "SUMM", comment="FOV_Y_deg",
-                                    Param1=acos_pos_line, Param2=acos_neg_line)); line += 1
-        new_cfg.report.append({
-            "启用": "Y",
-            "标签": "FOV_Y_deg",
-            "MF行号": fov_line,
-            "方向": "小",
-            "单位": "deg",
-        })
-        added.append("FOV_Y_deg")
-        log(f"FOV_Y：{product_type or 'RX'} 使用{surface_desc} {surface} 面，已追加 FOV_Y_deg。")
-
-    if added:
-        log("标准模板动态评价项：已追加 " + ", ".join(added))
-    return new_cfg
+               sensitivity_reader)
+from ._utils import _as_int, _yes, _num, _safe_name
+from ._validate import (_check_zmx_fingerprint, _validate_inputs,
+                        validate_config, validate_config_data)
+from ._nominals import read_report_nominals
+from ._trimming import (apply_standard_surface_scope_from_zmx,
+                        fill_auto_standard_surfaces)
+from ._dynamic_metrics import append_standard_dynamic_metrics
+from ._run_utils import (make_run_dir, write_json, tee_logger, read_tde_meta,
+                         write_field_mapping_report, log_field_mapping)
 
 
 @dataclass
@@ -750,30 +54,6 @@ class Prepared:
     tde_meta: list | None = None
 
 
-def _check_zmx_fingerprint(zmx: str, rp: dict, log=print) -> None:
-    """比对配置中的面数指纹与当前 zmx（公差填写向导生成的配置带此字段）。
-
-    指纹不一致说明 zmx 面结构在生成配置后被改动，面号可能错位，直接报错；
-    配置无指纹字段时跳过；zmx 解析失败只告警不阻断（后续裁剪逻辑另有兜底）。
-    """
-    expected = str(rp.get("面数指纹") or "").strip()
-    if not expected:
-        return
-    try:
-        actual = lens_scanner.fingerprint(lens_scanner.parse_surfaces(zmx))
-    except Exception as e:
-        log(f"面数指纹校验：读取 ZMX 失败，跳过校验。{type(e).__name__}: {e}")
-        return
-    if actual != expected:
-        raise ValueError(
-            "运行前校验失败：\n"
-            f"- 镜头文件面结构与配置生成时不一致（面号可能已错位）。\n"
-            f"  配置指纹: {expected}\n"
-            f"  当前指纹: {actual}\n"
-            f"  请用公差填写向导重新生成配置，或确认选择了正确的 zmx。")
-    log("面数指纹校验通过：zmx 面结构与配置生成时一致。")
-
-
 def prepare_session(zmx: str, config: str, outdir: str | None = None,
                     connect: str = "extension", log=print,
                     zos_dir: str | None = None,
@@ -793,18 +73,16 @@ def prepare_session(zmx: str, config: str, outdir: str | None = None,
         cfg = validate_config(zmx, config)
         rp = cfg.run_params
 
-    parent_out, out = _make_run_dir(zmx, outdir)
+    parent_out, out = make_run_dir(zmx, outdir)
     log_path = os.path.join(out, "run.log")
-    log = _tee_logger(log, log_path)
+    log = tee_logger(log, log_path)
     log(f"结果目录: {out}")
     log(f"日志文件: {log_path}")
-    used_excel_path = os.path.join(out, "used_excel.xlsx")
 
     _check_zmx_fingerprint(zmx, rp, log=log)
 
     standard_mode = str(rp.get("分析模式") or "").strip() == "标准模板"
     center_wave = _as_int(rp.get("中心波长号"), 0)
-    # 标准模板或启用动态评价项（公差填写向导配置）时，波长号留空/0 自动用主波长。
     center_wave_auto = (standard_mode or _yes(rp.get("启用动态评价项", "N"))) \
         and center_wave <= 0
     comp_surface = _as_int(rp.get("后焦补偿面"), 0)
@@ -812,8 +90,6 @@ def prepare_session(zmx: str, config: str, outdir: str | None = None,
     comp_max = _num(rp.get("补偿Max"))
     comp_freq = _num(rp.get("补偿线对"), 34.0)
     comp_mode = str(rp.get("补偿器模式") or "无").strip()
-    # 补偿器模式=无 → 完全不补偿：TSC 不写优化行/不走双 MF、不建 comp MF、不加 TDE COMP。
-    # 模式≠无 → 写优化行 + comp MF（双 MF）+ TDE COMP；未填后焦补偿面时自动用像面前一面。
     comp_off = str(comp_mode).replace(" ", "").lower() in ("无", "none", "")
     comp_on = not comp_off
 
@@ -830,9 +106,9 @@ def prepare_session(zmx: str, config: str, outdir: str | None = None,
     if safe_src_base != src_base:
         log(f"提示：镜头文件名包含空格或特殊字符，Zemax 输出前缀将使用安全名称: {safe_src_base}")
     copy_path = os.path.join(out, f"{safe_src_base}_tol{src_ext}")
-
     copy = sess.open_as_copy(zmx, copy_path=copy_path)
     log(f"工作副本: {copy}")
+
     if use_current_settings:
         current_args = current_args or {}
         cfg = current_settings.build_config_from_current_mfe(
@@ -871,6 +147,7 @@ def prepare_session(zmx: str, config: str, outdir: str | None = None,
         log("当前设置模式：已读取当前 MFE，保留当前 TDE。")
         for msg in current_settings.summarize_config(cfg):
             log(msg)
+
     lens_info = sess.read_lens_info()
     is_tx_standard = standard_mode and str(rp.get("产品类型") or "").strip().upper() == "TX"
     if is_tx_standard and comp_on:
@@ -886,6 +163,7 @@ def prepare_session(zmx: str, config: str, outdir: str | None = None,
         rp["后焦补偿面"] = comp_surface
         log(f"未填后焦补偿面，已自动设置为像面前一面: {comp_surface}")
     add_comp_operand = comp_on and comp_surface > 0 and not use_current_settings
+
     if center_wave_auto and lens_info.primary_wave > 0:
         center_wave = lens_info.primary_wave
         rp["中心波长号"] = center_wave
@@ -895,18 +173,19 @@ def prepare_session(zmx: str, config: str, outdir: str | None = None,
                     and _as_int(row.get("Param2"), 0) <= 0:
                 row["Param2"] = center_wave
         log(f"已自动使用主波长号: {center_wave}")
-    _fill_auto_standard_surfaces(sess.sys, cfg, rp, log=log)
-    _apply_standard_surface_scope_from_zmx(zmx, cfg, rp, log=log)
+
+    fill_auto_standard_surfaces(sess.sys, cfg, rp, log=log)
+    apply_standard_surface_scope_from_zmx(zmx, cfg, rp, log=log)
 
     cfg, field_mapping_result = field_mapping.process(sess.sys, cfg, rp, log=log)
     field_mapping_report_path = ""
     if field_mapping_result.enabled:
         log(f"已启用视场映射：目标 {len(field_mapping_result.targets)} 个，"
             f"阈值 {field_mapping_result.threshold:g}，插入策略={field_mapping_result.insert_strategy}")
-        _log_field_mapping(field_mapping_result, log)
+        log_field_mapping(field_mapping_result, log)
         field_mapping_report_path = os.path.join(out, "field_mapping.txt")
         try:
-            _write_field_mapping_report(field_mapping_report_path, field_mapping_result)
+            write_field_mapping_report(field_mapping_report_path, field_mapping_result)
             log(f"视场映射报告: {field_mapping_report_path}")
         except Exception as e:
             log(f"保存视场映射报告失败(忽略): {e}")
@@ -914,8 +193,9 @@ def prepare_session(zmx: str, config: str, outdir: str | None = None,
     else:
         log("视场映射：未启用")
 
-    cfg = _append_standard_dynamic_metrics(sess.sys, cfg, rp, center_wave, log=log)
+    cfg = append_standard_dynamic_metrics(sess.sys, cfg, rp, center_wave, log=log)
 
+    used_excel_path = os.path.join(out, "used_excel.xlsx")
     try:
         if use_current_settings:
             current_settings.write_config_excel(used_excel_path, cfg, overwrite=True)
@@ -955,11 +235,10 @@ def prepare_session(zmx: str, config: str, outdir: str | None = None,
             log(f"已写入 TDE 公差: {n_tde} 条（补偿器模式=无，已忽略后焦补偿面 {comp_surface}，测试波长 {test_wl}um）")
         else:
             log(f"已写入 TDE 公差: {n_tde} 条（不加 COMP 操作数，测试波长 {test_wl}um）")
-
         n_mfe, mf_path = mfe_builder.build_and_save(sess.sys, cfg.mfe, base)
         log(f"已重建 MFE: {n_mfe} 行  → {mf_path}")
 
-    report_meta = _read_report_nominals(sess.sys, cfg.mfe, cfg.report)
+    report_meta = read_report_nominals(sess.sys, cfg.mfe, cfg.report)
     nominal_count = sum(1 for row in report_meta if row.get("名义值") not in (None, ""))
     if nominal_count:
         preview = ", ".join(
@@ -975,8 +254,6 @@ def prepare_session(zmx: str, config: str, outdir: str | None = None,
     comp_mf_name = None
     if comp_on:
         wave_for_mf = center_wave if center_wave > 0 else (lens_info.primary_wave or 2)
-        # 补偿Min/Max（相对名义厚度）→ 换算后焦面厚度绝对上下限，
-        # 作为 CTGT/CTLT 软约束写进补偿 MF（与 TDE COMP 硬限位配合）。
         thick_min = thick_max = None
         if comp_surface > 0 and (comp_min is not None or comp_max is not None):
             try:
@@ -1003,7 +280,7 @@ def prepare_session(zmx: str, config: str, outdir: str | None = None,
         comp_mode=comp_mode, comp_mf_name=comp_mf_name, log=log)
     log(f"已生成 TSC: {n_report} 个 REPORT 分项  → {tsc_path}")
 
-    tde_meta = _read_tde_meta(sess.sys)
+    tde_meta = read_tde_meta(sess.sys)
     comp_count = sum(1 for row in tde_meta if row.get("操作数") == "COMP")
     if comp_count:
         log(f"已记录 TDE 元数据：{len(tde_meta)} 个公差操作数，其中 COMP {comp_count} 个。")
@@ -1011,7 +288,7 @@ def prepare_session(zmx: str, config: str, outdir: str | None = None,
     sess.sys.Save()
 
     run_config_path = os.path.join(out, "run_config.json")
-    _write_json(run_config_path, {
+    write_json(run_config_path, {
         "source_zmx": os.path.abspath(zmx),
         "config_excel": os.path.abspath(config) if config else "",
         "parent_outdir": parent_out,

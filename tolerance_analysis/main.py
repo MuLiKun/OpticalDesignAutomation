@@ -22,11 +22,19 @@ import argparse
 import os
 import sys
 
-# ===== 在这里设置地址 =====================================================
-ZMX_FILE = r"F:\个人文件\P3111\05304_tol.zmx"      # 待分析的 zmx 文件
-CONFIG_FILE = r"F:\个人文件\P3111\tol_config_05304.xlsx"             # 输入的 Excel 配置
-OUTPUT_DIR = r"F:\个人文件\P3111"                                    # 输出目录(ZTD/Worst/Best)；留空=脚本下 output\
-CONNECT_MODE = "standalone"                         # 默认 standalone（推荐）；或 extension
+# ===== 在这里设置地址（命令行参数 > 环境变量 > 下方默认值）===================
+# 环境变量优先级高于以下默认值，命令行参数优先于环境变量。
+#   ZEMAX_TOL_ZMX     — 待分析的 zmx 文件
+#   ZEMAX_TOL_CONFIG  — Excel 配置文件
+#   ZEMAX_TOL_OUTDIR  — 输出目录
+#   ZEMAX_TOL_CONNECT — 连接模式 (standalone/extension)
+ZMX_FILE = os.environ.get("ZEMAX_TOL_ZMX",
+                          r"F:\个人文件\P3111\05304_tol.zmx")
+CONFIG_FILE = os.environ.get("ZEMAX_TOL_CONFIG",
+                             r"F:\个人文件\P3111\tol_config_05304.xlsx")
+OUTPUT_DIR = os.environ.get("ZEMAX_TOL_OUTDIR",
+                            r"F:\个人文件\P3111")
+CONNECT_MODE = os.environ.get("ZEMAX_TOL_CONNECT", "standalone")
 # =========================================================================
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
